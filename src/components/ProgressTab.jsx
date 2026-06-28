@@ -197,69 +197,61 @@ export default function ProgressTab({ history, prs }) {
           </div>
         ) : (
           <div style={{ padding: '14px 16px' }}>
-            {history.length < 3 ? (
-              <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                Log at least 3 sessions to unlock AI feedback.
+            <button className="ai-btn" onClick={getFeedback} disabled={loading}>
+              {loading ? 'Analyzing…' : 'Get AI feedback'}
+            </button>
+            {aiError && (
+              <div style={{ fontSize: 13, color: 'var(--red)', marginTop: 10, lineHeight: 1.5 }}>
+                {aiError}
               </div>
-            ) : (
-              <>
-                <button className="ai-btn" onClick={getFeedback} disabled={loading}>
-                  {loading ? 'Analyzing…' : 'Get AI feedback'}
-                </button>
-                {aiError && (
-                  <div style={{ fontSize: 13, color: 'var(--red)', marginTop: 10, lineHeight: 1.5 }}>
-                    {aiError}
-                  </div>
-                )}
-                {feedback && (
-                  <div className="ai-feedback">{feedback}</div>
-                )}
-
-                <div className="chat-window">
-                  {chatMessages.length > 0 && (
-                    <div className="chat-messages">
-                      {chatMessages.map((msg, i) => (
-                        <div
-                          key={i}
-                          className={`chat-bubble ${msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}`}
-                        >
-                          {msg.content}
-                        </div>
-                      ))}
-                      {chatLoading && (
-                        <div className="chat-bubble chat-bubble-ai chat-bubble-typing">
-                          <span className="chat-dot" /><span className="chat-dot" /><span className="chat-dot" />
-                        </div>
-                      )}
-                      <div ref={chatEndRef} />
-                    </div>
-                  )}
-                  {chatError && (
-                    <div style={{ fontSize: 13, color: 'var(--red)', marginBottom: 8, lineHeight: 1.5 }}>
-                      {chatError}
-                    </div>
-                  )}
-                  <div className="chat-input-row">
-                    <textarea
-                      className="chat-input"
-                      placeholder="Ask your trainer…"
-                      value={chatInput}
-                      onChange={e => setChatInput(e.target.value)}
-                      onKeyDown={handleChatKey}
-                      rows={1}
-                    />
-                    <button
-                      className="chat-send-btn"
-                      onClick={sendChat}
-                      disabled={!chatInput.trim() || chatLoading}
-                      aria-label="Send"
-                    >
-                      ↑
-                    </button>
-                  </div>
-                </div>
-              </>
             )}
+            {feedback && (
+              <div className="ai-feedback">{feedback}</div>
+            )}
+
+            <div className="chat-window">
+              {chatMessages.length > 0 && (
+                <div className="chat-messages">
+                  {chatMessages.map((msg, i) => (
+                    <div
+                      key={i}
+                      className={`chat-bubble ${msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}`}
+                    >
+                      {msg.content}
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="chat-bubble chat-bubble-ai chat-bubble-typing">
+                      <span className="chat-dot" /><span className="chat-dot" /><span className="chat-dot" />
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+              )}
+              {chatError && (
+                <div style={{ fontSize: 13, color: 'var(--red)', marginBottom: 8, lineHeight: 1.5 }}>
+                  {chatError}
+                </div>
+              )}
+              <div className="chat-input-row">
+                <textarea
+                  className="chat-input"
+                  placeholder="Ask your trainer…"
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={handleChatKey}
+                  rows={1}
+                />
+                <button
+                  className="chat-send-btn"
+                  onClick={sendChat}
+                  disabled={!chatInput.trim() || chatLoading}
+                  aria-label="Send"
+                >
+                  ↑
+                </button>
+              </div>
+            </div>
             <button
               onClick={() => { save('lift_ai_key', ''); setApiKey(''); setFeedback(''); setAiError(''); }}
               style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 12, display: 'block' }}
