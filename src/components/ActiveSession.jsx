@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { uid, typeTag, formatTime, FULL_DAYS } from '../utils/helpers';
 import { useTimer } from '../hooks/useTimer';
 
-// Per-exercise state based on how many of its sets are checked
 function exState(setRows) {
   const done = setRows.filter(s => s.done).length;
   if (done === 0) return 'idle';
@@ -10,23 +9,23 @@ function exState(setRows) {
   return 'active';
 }
 
-export default function ActiveSession({ day, onFinish, prs, setPrs }) {
+export default function ActiveSession({ day, onFinish, onMinimize, prs, setPrs }) {
   const timer = useTimer();
   const [sets, setSets] = useState(() =>
     day.exercises.map(ex => Array.from({ length: ex.sets }, () => ({
       id: uid(), weight: ex.lastWeight || '', reps: '', done: false,
     })))
   );
-  const [newPrs, setNewPrs] = useState([]);
+  const [newPrs,     setNewPrs]     = useState([]);
   const [pickingDay, setPickingDay] = useState(false);
   const [pendingLog, setPendingLog] = useState(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { timer.start(); }, []);
 
-  const exStates = sets.map(exState);
-  const doneExs  = exStates.filter(s => s === 'done').length;
-  const totalExs = day.exercises.length;
+  const exStates    = sets.map(exState);
+  const doneExs     = exStates.filter(s => s === 'done').length;
+  const totalExs    = day.exercises.length;
   const progressPct = totalExs > 0 ? (doneExs / totalExs) * 100 : 0;
 
   const updateSet = (exIdx, setIdx, field, val) => {
@@ -65,6 +64,16 @@ export default function ActiveSession({ day, onFinish, prs, setPrs }) {
     });
   };
 
+  const handlePauseToggle = () => {
+    timer.running ? timer.pause() : timer.resume();
+  };
+
+  // Pause timer and return to main tabs — session state is preserved in the DOM
+  const handleMinimize = () => {
+    timer.pause();
+    onMinimize();
+  };
+
   const handleFinishClick = () => {
     timer.stop();
     const doneSets = sets.flat().filter(s => s.done).length;
@@ -90,7 +99,7 @@ export default function ActiveSession({ day, onFinish, prs, setPrs }) {
 
   return (
     <div className="app">
-      {/* Day-tag picker — shown after Finish is tapped */}
+      {/* Day-tag picker */}
       {pickingDay && (
         <div className="sheet-overlay">
           <div className="sheet">
@@ -116,12 +125,15 @@ export default function ActiveSession({ day, onFinish, prs, setPrs }) {
         </div>
       )}
 
-      {/* Session header */}
+      {/* Header */}
       <div className="session-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button className="session-back-btn" onClick={handleMinimize} title="Minimize session">
+            ‹
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div className="session-title">
-              {day.name} <span className={`day-tag ${typeTag(day.type)}`}>{day.type}</span>
+              {day.name}&nbsp;<span className={`day-tag ${typeTag(day.type)}`}>{day.type}</span>
             </div>
             <div className="session-meta">
               {totalExs > 0
@@ -129,9 +141,20 @@ export default function ActiveSession({ day, onFinish, prs, setPrs }) {
                 : 'Custom session'}
             </div>
           </div>
-          <div className="timer-pill">{formatTime(timer.elapsed)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <button
+              className="pause-btn"
+              onClick={handlePauseToggle}
+              title={timer.running ? 'Pause timer' : 'Resume timer'}
+            >
+              {timer.running ? '||' : '▶'}
+            </button>
+            <div className={`timer-pill ${!timer.running ? 'timer-paused' : ''}`}>
+              {formatTime(timer.elapsed)}
+            </div>
+          </div>
         </div>
-        <div className="progress-track">
+        <div className="progress-track" style={{ marginTop: 12 }}>
           <div className="progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
       </div>
@@ -145,10 +168,10 @@ export default function ActiveSession({ day, onFinish, prs, setPrs }) {
         )}
 
         {day.exercises.map((ex, exIdx) => {
-          const state   = exStates[exIdx];
-          const isDone  = state === 'done';
-          const isActive= state === 'active';
-          const isPr    = newPrs.includes(ex.name);
+          const state  = exStates[exIdx];
+          const isDone = state === 'done';
+          const isActive = state === 'active';
+          const isPr   = newPrs.includes(ex.name);
 
           return (
             <div
@@ -161,8 +184,8 @@ export default function ActiveSession({ day, onFinish, prs, setPrs }) {
                   <div className="ex-scheme">{ex.sets}×{ex.reps} · Last: {ex.lastWeight ? ex.lastWeight + ' lbs' : 'BW'}</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {isPr    && <span className="ex-badge pr">PR</span>}
-                  {isDone  && <span className="ex-badge ex-done-badge">✓ Done</span>}
+                  {isPr   && <span className="ex-badge pr">PR</span>}
+                  {isDone && <span className="ex-badge ex-done-badge">✓ Done</span>}
                 </div>
               </div>
 

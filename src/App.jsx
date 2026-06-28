@@ -10,50 +10,89 @@ export default function App() {
   const [tab, setTab] = useState('today');
   const [program, setProgram] = useState(() => {
     const saved = load('lift_program', null);
-    // Migrate: old format was an array of day objects
     if (!saved || Array.isArray(saved)) return DEFAULT_PROGRAM;
     return saved;
   });
-  const [history, setHistory] = useState(() => load('lift_history', []));
-  const [prs, setPrs] = useState(() => load('lift_prs', {}));
-  const [activeSession, setActiveSession] = useState(null);
+  const [history,          setHistory]          = useState(() => load('lift_history', []));
+  const [prs,              setPrs]              = useState(() => load('lift_prs', {}));
+  const [activeSession,    setActiveSession]    = useState(null);
+  const [sessionMinimized, setSessionMinimized] = useState(false);
 
   useEffect(() => { save('lift_program', program); }, [program]);
   useEffect(() => { save('lift_history', history); }, [history]);
-  useEffect(() => { save('lift_prs', prs); }, [prs]);
+  useEffect(() => { save('lift_prs',     prs);     }, [prs]);
 
-  const handleStart = (day) => setActiveSession(day);
+  const handleStart = (day) => {
+    setActiveSession(day);
+    setSessionMinimized(false);
+  };
+
+  const handleMinimize = () => {
+    setSessionMinimized(true);
+    setTab('today');
+  };
+
+  const handleResume = () => {
+    setSessionMinimized(false);
+  };
 
   const handleFinish = (log) => {
     setHistory(h => [...h, log]);
     setActiveSession(null);
+    setSessionMinimized(false);
     setTab('progress');
   };
 
-  if (activeSession) {
-    return <ActiveSession day={activeSession} onFinish={handleFinish} prs={prs} setPrs={setPrs} />;
-  }
-
   const tabs = [
-    { id: 'today',   label: 'Today',   icon: '⚡' },
-    { id: 'program', label: 'Program', icon: '📋' },
-    { id: 'progress',label: 'Progress',icon: '📈' },
+    { id: 'today',    label: 'Today',    icon: '⚡' },
+    { id: 'program',  label: 'Program',  icon: '📋' },
+    { id: 'progress', label: 'Progress', icon: '📈' },
   ];
 
   return (
-    <div className="app">
-      {tab === 'today'    && <TodayTab    program={program} onStart={handleStart} />}
-      {tab === 'program'  && <ProgramTab  program={program} setProgram={setProgram} />}
-      {tab === 'progress' && <ProgressTab history={history} prs={prs} />}
+    <>
+      {/* ActiveSession stays mounted whenever a session exists so React
+          preserves all set/timer state. Hidden via display:none when minimized. */}
+      {activeSession && (
+        <div style={sessionMinimized ? { display: 'none' } : {}}>
+          <ActiveSession
+            day={activeSession}
+            onFinish={handleFinish}
+            onMinimize={handleMinimize}
+            prs={prs}
+            setPrs={setPrs}
+          />
+        </div>
+      )}
 
-      <div className="tab-bar">
-        {tabs.map(t => (
-          <button key={t.id} className={`tab-btn ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
-            <span className="tab-icon">{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
-      </div>
-    </div>
+      {/* Tab shell — visible when there is no active session, or it is minimized */}
+      {(!activeSession || sessionMinimized) && (
+        <div className="app">
+          {tab === 'today' && (
+            <TodayTab
+              program={program}
+              onStart={handleStart}
+              minimizedSession={sessionMinimized ? activeSession : null}
+              onResume={handleResume}
+            />
+          )}
+          {tab === 'program'  && <ProgramTab  program={program} setProgram={setProgram} />}
+          {tab === 'progress' && <ProgressTab history={history} prs={prs} />}
+
+          <div className="tab-bar">
+            {tabs.map(t => (
+              <button
+                key={t.id}
+                className={`tab-btn ${tab === t.id ? 'active' : ''}`}
+                onClick={() => setTab(t.id)}
+              >
+                <span className="tab-icon">{t.icon}</span>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

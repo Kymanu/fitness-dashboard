@@ -14,7 +14,9 @@ export function useTimer() {
   return {
     elapsed,
     running,
-    start: () => { setElapsed(0); setRunning(true); },
-    stop: () => setRunning(false),
+    start:  () => { setElapsed(0); setRunning(true); },
+    pause:  () => setRunning(false),
+    resume: () => setRunning(true),
+    stop:   () => setRunning(false),
   };
 }

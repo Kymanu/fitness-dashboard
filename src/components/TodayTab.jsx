@@ -2,12 +2,12 @@ import { TEMPLATE_TYPES } from '../data/program';
 import { typeTag } from '../utils/helpers';
 
 const WORKOUT_META = {
-  Push: { style: 'wbtn-push', abbr: 'P' },
+  Push: { style: 'wbtn-push', abbr: 'P'  },
   Pull: { style: 'wbtn-pull', abbr: 'PL' },
-  Legs: { style: 'wbtn-legs', abbr: 'L' },
+  Legs: { style: 'wbtn-legs', abbr: 'L'  },
 };
 
-export default function TodayTab({ program, onStart }) {
+export default function TodayTab({ program, onStart, minimizedSession, onResume }) {
   const start = (key) => {
     if (key === 'Custom') {
       onStart({ name: 'Custom', type: 'Custom', exercises: [] });
@@ -25,9 +25,29 @@ export default function TodayTab({ program, onStart }) {
         </div>
       </div>
 
+      {/* Resume banner — shown when a session is running in the background */}
+      {minimizedSession && (
+        <button className="resume-banner" onClick={onResume}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>
+              Session in progress
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+              {minimizedSession.name} · paused — tap to resume
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className={`day-tag ${typeTag(minimizedSession.type)}`}>
+              {minimizedSession.type}
+            </span>
+            <span style={{ fontSize: 20, color: 'var(--accent)', lineHeight: 1 }}>›</span>
+          </div>
+        </button>
+      )}
+
       <div className="workout-grid">
         {TEMPLATE_TYPES.map(key => {
-          const meta = WORKOUT_META[key];
+          const meta  = WORKOUT_META[key];
           const count = program[key]?.exercises.length ?? 0;
           return (
             <button key={key} className={`workout-btn ${meta.style}`} onClick={() => start(key)}>
