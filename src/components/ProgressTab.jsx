@@ -1,58 +1,102 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { DAYS_OF_WEEK } from '../data/program';
 import { getTodayIdx, typeTag, formatTime, load, save } from '../utils/helpers';
 
 export default function ProgressTab({ history, prs }) {
   const todayIdx = getTodayIdx();
-  const [apiKey,   setApiKey]   = useState(() => load('lift_ai_key', ''));
-  const [keyDraft, setKeyDraft] = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [feedback, setFeedback] = useState('');
-  const [aiError,  setAiError]  = useState('');
+  const [apiKey,      setApiKey]      = useState(() => load('lift_ai_key', ''));
+  const [keyDraft,    setKeyDraft]    = useState('');
+  const [loading,     setLoading]     = useState(false);
+  const [feedback,    setFeedback]    = useState('');
+  const [aiError,     setAiError]     = useState('');
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput,   setChatInput]   = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError,   setChatError]   = useState('');
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, chatLoading]);
+
+  const buildContext = () => {
+    const reversed = [...history].reverse().slice(0, 20);
+    const typeCounts = {};
+    history.forEach(h => { typeCounts[h.type] = (typeCounts[h.type] || 0) + 1; });
+    const sessionLines = reversed.map(h => {
+      const date = new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const min = Math.round((h.duration || 0) / 60);
+      return `- ${date}: ${h.type} — ${h.totalSets} sets, ${min} min`;
+    }).join('\n');
+    const prLines = Object.entries(prs).length > 0
+      ? Object.entries(prs).map(([ex, w]) => `- ${ex}: ${w} lbs`).join('\n')
+      : '- No PRs recorded yet';
+    const freqSummary = Object.entries(typeCounts).map(([t, n]) => `${t}: ${n}`).join(', ');
+    return `User's workout data:\n\nLast ${Math.min(history.length, 20)} workouts (most recent first):\n${sessionLines}\n\nWorkout breakdown: ${freqSummary} (${history.length} total)\n\nPersonal Records:\n${prLines}`;
+  };
+
+  const callClaude = async (system, messages, maxTokens = 1024) => {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, system, messages }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return data.content[0].text;
+  };
 
   const getFeedback = async () => {
     setLoading(true);
     setFeedback('');
     setAiError('');
     try {
-      const reversed = [...history].reverse().slice(0, 20);
-      const typeCounts = {};
-      history.forEach(h => { typeCounts[h.type] = (typeCounts[h.type] || 0) + 1; });
-      const sessionLines = reversed.map(h => {
-        const date = new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const min = Math.round((h.duration || 0) / 60);
-        return `- ${date}: ${h.type} — ${h.totalSets} sets, ${min} min`;
-      }).join('\n');
-      const prLines = Object.entries(prs).length > 0
-        ? Object.entries(prs).map(([ex, w]) => `- ${ex}: ${w} lbs`).join('\n')
-        : '- No PRs recorded yet';
-      const freqSummary = Object.entries(typeCounts).map(([t, n]) => `${t}: ${n}`).join(', ');
-      const userContent = `My last ${Math.min(history.length, 20)} workouts (most recent first):\n${sessionLines}\n\nWorkout breakdown: ${freqSummary} (${history.length} total)\n\nPersonal Records:\n${prLines}`;
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1024,
-          system: "You are a knowledgeable personal trainer analyzing a user's workout history. Give specific, actionable feedback based on their actual data. Be concise and direct — 3 to 5 bullet points max. Focus on patterns, imbalances, and what to prioritize next.",
-          messages: [{ role: 'user', content: userContent }],
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
-      setFeedback(data.content[0].text);
+      const text = await callClaude(
+        "You are a knowledgeable personal trainer analyzing a user's workout history. Give specific, actionable feedback based on their actual data. Be concise and direct — 3 to 5 bullet points max. Focus on patterns, imbalances, and what to prioritize next.",
+        [{ role: 'user', content: buildContext() }]
+      );
+      setFeedback(text);
     } catch (e) {
       setAiError(e.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendChat = async () => {
+    const text = chatInput.trim();
+    if (!text || chatLoading) return;
+    const userMsg = { role: 'user', content: text };
+    const nextMessages = [...chatMessages, userMsg];
+    setChatMessages(nextMessages);
+    setChatInput('');
+    setChatLoading(true);
+    setChatError('');
+    try {
+      const reply = await callClaude(
+        `You are a knowledgeable personal trainer. Answer the user's questions with specific, actionable advice based on their actual training data. Be concise.\n\n${buildContext()}`,
+        nextMessages
+      );
+      setChatMessages(msgs => [...msgs, { role: 'assistant', content: reply }]);
+    } catch (e) {
+      setChatError(e.message);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleChatKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChat();
     }
   };
 
@@ -170,6 +214,50 @@ export default function ProgressTab({ history, prs }) {
                 {feedback && (
                   <div className="ai-feedback">{feedback}</div>
                 )}
+
+                <div className="chat-window">
+                  {chatMessages.length > 0 && (
+                    <div className="chat-messages">
+                      {chatMessages.map((msg, i) => (
+                        <div
+                          key={i}
+                          className={`chat-bubble ${msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}`}
+                        >
+                          {msg.content}
+                        </div>
+                      ))}
+                      {chatLoading && (
+                        <div className="chat-bubble chat-bubble-ai chat-bubble-typing">
+                          <span className="chat-dot" /><span className="chat-dot" /><span className="chat-dot" />
+                        </div>
+                      )}
+                      <div ref={chatEndRef} />
+                    </div>
+                  )}
+                  {chatError && (
+                    <div style={{ fontSize: 13, color: 'var(--red)', marginBottom: 8, lineHeight: 1.5 }}>
+                      {chatError}
+                    </div>
+                  )}
+                  <div className="chat-input-row">
+                    <textarea
+                      className="chat-input"
+                      placeholder="Ask your trainer…"
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={handleChatKey}
+                      rows={1}
+                    />
+                    <button
+                      className="chat-send-btn"
+                      onClick={sendChat}
+                      disabled={!chatInput.trim() || chatLoading}
+                      aria-label="Send"
+                    >
+                      ↑
+                    </button>
+                  </div>
+                </div>
               </>
             )}
             <button
