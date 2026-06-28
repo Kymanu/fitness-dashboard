@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { uid, typeTag, formatTime, FULL_DAYS } from '../utils/helpers';
+import { uid, save, typeTag, formatTime, FULL_DAYS } from '../utils/helpers';
 import { useTimer } from '../hooks/useTimer';
 
 function exState(setRows) {
@@ -9,10 +9,15 @@ function exState(setRows) {
   return 'active';
 }
 
-export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, prs, setPrs }) {
-  const timer = useTimer();
+const selectOnFocus = (e) => {
+  const el = e.target;
+  requestAnimationFrame(() => el.select());
+};
+
+export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, prs, setPrs, initialSets, initialElapsed }) {
+  const timer = useTimer(initialElapsed || 0);
   const [sets, setSets] = useState(() =>
-    day.exercises.map(ex => Array.from({ length: ex.sets }, () => ({
+    initialSets || day.exercises.map(ex => Array.from({ length: ex.sets }, () => ({
       id: uid(), weight: ex.lastWeight || '', reps: '', done: false,
     })))
   );
@@ -21,8 +26,15 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
   const [pendingLog,  setPendingLog]  = useState(null);
   const [showDiscard, setShowDiscard] = useState(false);
 
+  // Fresh sessions auto-start; restored sessions stay paused at initialElapsed
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { timer.start(); }, []);
+  useEffect(() => { if (!initialSets) timer.start(); }, []);
+
+  // Persist sets to localStorage on every change
+  useEffect(() => { save('lift_session_sets', sets); }, [sets]);
+
+  // Persist elapsed every timer tick
+  useEffect(() => { save('lift_session_elapsed', timer.elapsed); }, [timer.elapsed]);
 
   const exStates    = sets.map(exState);
   const doneExs     = exStates.filter(s => s === 'done').length;
@@ -222,11 +234,13 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
                       className={`set-input ${s.weight ? 'filled' : ''}`}
                       type="number" placeholder="lbs" value={s.weight}
                       onChange={e => updateSet(exIdx, si, 'weight', e.target.value)}
+                      onFocus={selectOnFocus}
                     />
                     <input
                       className={`set-input ${s.reps ? 'filled' : ''}`}
                       type="number" placeholder="reps" value={s.reps}
                       onChange={e => updateSet(exIdx, si, 'reps', e.target.value)}
+                      onFocus={selectOnFocus}
                     />
                     <button className={`set-check ${s.done ? 'checked' : ''}`} onClick={() => toggleDone(exIdx, si)}>
                       {s.done ? '✓' : ''}

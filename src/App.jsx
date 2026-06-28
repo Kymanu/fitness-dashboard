@@ -14,17 +14,38 @@ export default function App() {
     if (!saved || Array.isArray(saved)) return DEFAULT_PROGRAM;
     return saved;
   });
-  const [history,          setHistory]          = useState(() => load('lift_history', []));
-  const [prs,              setPrs]              = useState(() => load('lift_prs', {}));
-  const [activeSession,    setActiveSession]    = useState(null);
+  const [history, setHistory] = useState(() => load('lift_history', []));
+  const [prs,     setPrs]     = useState(() => load('lift_prs', {}));
+
+  // Session state — check for a persisted session at startup
+  const [activeSession,    setActiveSession]    = useState(() => load('lift_session_day', null));
   const [sessionMinimized, setSessionMinimized] = useState(false);
   const [buildingCustom,   setBuildingCustom]   = useState(false);
+  const [sessionRestored,  setSessionRestored]  = useState(() => !!load('lift_session_day', null));
+  const [sessionKey,       setSessionKey]       = useState('restored');
+
+  // Read once at mount; only used when sessionRestored === true
+  const [initSets]    = useState(() => load('lift_session_sets', null));
+  const [initElapsed] = useState(() => load('lift_session_elapsed', 0));
 
   useEffect(() => { save('lift_program', program); }, [program]);
   useEffect(() => { save('lift_history', history); }, [history]);
   useEffect(() => { save('lift_prs',     prs);     }, [prs]);
 
+  // Persist the active session day object whenever it changes
+  useEffect(() => {
+    if (activeSession) save('lift_session_day', activeSession);
+  }, [activeSession]);
+
+  const clearPersistedSession = () => {
+    localStorage.removeItem('lift_session_day');
+    localStorage.removeItem('lift_session_sets');
+    localStorage.removeItem('lift_session_elapsed');
+  };
+
   const handleStart = (day) => {
+    setSessionKey((day.type || 'custom') + '_' + Date.now());
+    setSessionRestored(false);
     setActiveSession(day);
     setSessionMinimized(false);
     setBuildingCustom(false);
@@ -40,11 +61,13 @@ export default function App() {
   const handleResume = () => setSessionMinimized(false);
 
   const handleDiscard = () => {
+    clearPersistedSession();
     setActiveSession(null);
     setSessionMinimized(false);
   };
 
   const handleFinish = (log) => {
+    clearPersistedSession();
     setHistory(h => [...h, log]);
     setActiveSession(null);
     setSessionMinimized(false);
@@ -57,28 +80,28 @@ export default function App() {
     { id: 'progress', label: 'Progress', icon: '📈' },
   ];
 
-  // Determine which fullscreen view wins (at most one at a time)
   const showSession  = !!activeSession;
   const showBuilder  = !activeSession && buildingCustom;
   const showTabShell = (!activeSession || sessionMinimized) && !buildingCustom;
 
   return (
     <>
-      {/* ActiveSession — mounted whenever a session exists to preserve state */}
       {showSession && (
         <div style={sessionMinimized ? { display: 'none' } : { flex: 1, minHeight: 0 }}>
           <ActiveSession
+            key={sessionKey}
             day={activeSession}
             onFinish={handleFinish}
             onMinimize={handleMinimize}
             onDiscard={handleDiscard}
             prs={prs}
             setPrs={setPrs}
+            initialSets={sessionRestored ? initSets : null}
+            initialElapsed={sessionRestored ? initElapsed : 0}
           />
         </div>
       )}
 
-      {/* Custom workout builder */}
       {showBuilder && (
         <div style={{ flex: 1, minHeight: 0 }}>
           <CustomBuilder
@@ -88,7 +111,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Tab shell */}
       {showTabShell && (
         <div className="app">
           {tab === 'today' && (

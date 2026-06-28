@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TEMPLATE_TYPES } from '../data/program';
 import { typeTag } from '../utils/helpers';
 import ExerciseSheet from './ExerciseSheet';
+import ExercisePickerSheet from './ExercisePickerSheet';
 
 const TYPE_LABEL = { Push: 'tag-push', Pull: 'tag-pull', Legs: 'tag-legs' };
 
@@ -21,7 +22,6 @@ export default function ProgramTab({ program, setProgram }) {
 
   const addEx = (type, ex) => {
     setProgram(p => ({ ...p, [type]: { exercises: [...p[type].exercises, ex] } }));
-    setAddExType(null);
   };
 
   const moveEx = (type, exId, dir) => {
@@ -106,8 +106,9 @@ export default function ProgramTab({ program, setProgram }) {
         />
       )}
       {addExType && (
-        <ExerciseSheet
-          onSave={ex => addEx(addExType, ex)}
+        <ExercisePickerSheet
+          templateName={addExType}
+          onAdd={ex => addEx(addExType, ex)}
           onClose={() => setAddExType(null)}
         />
       )}

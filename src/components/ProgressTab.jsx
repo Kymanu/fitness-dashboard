@@ -1,8 +1,60 @@
+import { useState } from 'react';
 import { DAYS_OF_WEEK } from '../data/program';
-import { getTodayIdx, typeTag, formatTime } from '../utils/helpers';
+import { getTodayIdx, typeTag, formatTime, load, save } from '../utils/helpers';
 
 export default function ProgressTab({ history, prs }) {
   const todayIdx = getTodayIdx();
+  const [apiKey,   setApiKey]   = useState(() => load('lift_ai_key', ''));
+  const [keyDraft, setKeyDraft] = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [aiError,  setAiError]  = useState('');
+
+  const getFeedback = async () => {
+    setLoading(true);
+    setFeedback('');
+    setAiError('');
+    try {
+      const reversed = [...history].reverse().slice(0, 20);
+      const typeCounts = {};
+      history.forEach(h => { typeCounts[h.type] = (typeCounts[h.type] || 0) + 1; });
+      const sessionLines = reversed.map(h => {
+        const date = new Date(h.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const min = Math.round((h.duration || 0) / 60);
+        return `- ${date}: ${h.type} — ${h.totalSets} sets, ${min} min`;
+      }).join('\n');
+      const prLines = Object.entries(prs).length > 0
+        ? Object.entries(prs).map(([ex, w]) => `- ${ex}: ${w} lbs`).join('\n')
+        : '- No PRs recorded yet';
+      const freqSummary = Object.entries(typeCounts).map(([t, n]) => `${t}: ${n}`).join(', ');
+      const userContent = `My last ${Math.min(history.length, 20)} workouts (most recent first):\n${sessionLines}\n\nWorkout breakdown: ${freqSummary} (${history.length} total)\n\nPersonal Records:\n${prLines}`;
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1024,
+          system: "You are a knowledgeable personal trainer analyzing a user's workout history. Give specific, actionable feedback based on their actual data. Be concise and direct — 3 to 5 bullet points max. Focus on patterns, imbalances, and what to prioritize next.",
+          messages: [{ role: 'user', content: userContent }],
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setFeedback(data.content[0].text);
+    } catch (e) {
+      setAiError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Week streak: calendar-based (did you log a session on each day this week?)
   const thisWeek = DAYS_OF_WEEK.map((d, i) => {
@@ -75,6 +127,61 @@ export default function ProgressTab({ history, prs }) {
           );
         })}
       </div>
+      <div className="section-title" style={{ marginTop: 8 }}>AI Trainer</div>
+      <div className="card" style={{ margin: '0 16px' }}>
+        {!apiKey ? (
+          <div style={{ padding: '14px 16px' }}>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12, lineHeight: 1.5 }}>
+              Enter your Anthropic API key to get personalized feedback on your training.
+            </div>
+            <input
+              className="field-input"
+              type="password"
+              placeholder="sk-ant-api..."
+              value={keyDraft}
+              onChange={e => setKeyDraft(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <button
+              className="sheet-save"
+              style={{ marginTop: 4, opacity: keyDraft.trim() ? 1 : 0.45 }}
+              onClick={() => { const k = keyDraft.trim(); if (!k) return; save('lift_ai_key', k); setApiKey(k); setKeyDraft(''); }}
+            >
+              Save key
+            </button>
+          </div>
+        ) : (
+          <div style={{ padding: '14px 16px' }}>
+            {history.length < 3 ? (
+              <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                Log at least 3 sessions to unlock AI feedback.
+              </div>
+            ) : (
+              <>
+                <button className="ai-btn" onClick={getFeedback} disabled={loading}>
+                  {loading ? 'Analyzing…' : 'Get AI feedback'}
+                </button>
+                {aiError && (
+                  <div style={{ fontSize: 13, color: 'var(--red)', marginTop: 10, lineHeight: 1.5 }}>
+                    {aiError}
+                  </div>
+                )}
+                {feedback && (
+                  <div className="ai-feedback">{feedback}</div>
+                )}
+              </>
+            )}
+            <button
+              onClick={() => { save('lift_ai_key', ''); setApiKey(''); setFeedback(''); setAiError(''); }}
+              style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 12, display: 'block' }}
+            >
+              Change API key
+            </button>
+          </div>
+        )}
+      </div>
+
       <div style={{ height: 20 }} />
     </div>
   );

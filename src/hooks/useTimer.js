@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
-export function useTimer() {
-  const [elapsed, setElapsed] = useState(0);
+export function useTimer(initialElapsed = 0) {
+  const [elapsed, setElapsed] = useState(initialElapsed);
   const [running, setRunning] = useState(false);
   const ref = useRef(null);
 
