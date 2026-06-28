@@ -1,0 +1,5 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="115" fill="#1a1a1a"/>
+  <!-- Lightning bolt: clockwise from top-right point -->
+  <polygon points="310,55 185,275 270,275 205,455 345,215 280,215" fill="#7c6af7"/>
+</svg>
