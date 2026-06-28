@@ -59,7 +59,7 @@ export default function App() {
       {/* ActiveSession stays mounted whenever a session exists so React
           preserves all set/timer state. Hidden via display:none when minimized. */}
       {activeSession && (
-        <div style={sessionMinimized ? { display: 'none' } : {}}>
+        <div style={sessionMinimized ? { display: 'none' } : { flex: 1, minHeight: 0 }}>
           <ActiveSession
             day={activeSession}
             onFinish={handleFinish}
