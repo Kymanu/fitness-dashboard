@@ -3,6 +3,8 @@ import { getTodayIdx, typeTag, formatTime } from '../utils/helpers';
 
 export default function ProgressTab({ history, prs }) {
   const todayIdx = getTodayIdx();
+
+  // Week streak: calendar-based (did you log a session on each day this week?)
   const thisWeek = DAYS_OF_WEEK.map((d, i) => {
     const done = history.some(h => {
       const date = new Date(h.date);
@@ -13,8 +15,8 @@ export default function ProgressTab({ history, prs }) {
     return { label: d, done, today: i === todayIdx };
   });
 
-  const recent = [...history].reverse().slice(0, 10);
-  const maxVol = Math.max(...history.map(h => h.totalSets || 0), 1);
+  const recent  = [...history].reverse().slice(0, 20);
+  const maxVol  = Math.max(...history.map(h => h.totalSets || 0), 1);
 
   return (
     <div className="content">
@@ -50,14 +52,19 @@ export default function ProgressTab({ history, prs }) {
           </div>
         )}
         {recent.map(h => {
-          const d = new Date(h.date);
-          const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          const dur = formatTime(h.duration || 0);
+          const d    = new Date(h.date);
+          const date = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const dur  = formatTime(h.duration || 0);
+          // dayTag: user-chosen day. Fallback: old entries stored day in dayName.
+          const dayLabel = h.dayTag || (h.dayName !== h.type ? h.dayName : null);
+
           return (
             <div key={h.id} className="history-item">
-              <div className="history-date">{label} · {dur}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div className="history-name">{h.dayName}</div>
+              <div className="history-date">{date} · {dur}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                {dayLabel && (
+                  <div className="history-name">{dayLabel}</div>
+                )}
                 <span className={`day-tag ${typeTag(h.type)}`}>{h.type}</span>
               </div>
               <div className="history-stats">{h.totalSets} sets logged</div>

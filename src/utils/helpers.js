@@ -24,3 +24,5 @@ export function getTodayIdx() {
   const d = new Date().getDay();
   return d === 0 ? 6 : d - 1;
 }
+
+export const FULL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];

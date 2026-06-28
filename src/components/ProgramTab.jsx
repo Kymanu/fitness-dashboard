@@ -1,73 +1,116 @@
 import { useState } from 'react';
+import { TEMPLATE_TYPES } from '../data/program';
 import { typeTag } from '../utils/helpers';
 import ExerciseSheet from './ExerciseSheet';
-import DaySheet from './DaySheet';
+
+const TYPE_LABEL = { Push: 'tag-push', Pull: 'tag-pull', Legs: 'tag-legs' };
 
 export default function ProgramTab({ program, setProgram }) {
-  const [editDay, setEditDay] = useState(null);
-  const [editEx, setEditEx] = useState(null);
-  const [editExDay, setEditExDay] = useState(null);
-  const [addExDay, setAddExDay] = useState(null);
-  const [addDay, setAddDay] = useState(false);
+  const [editEx,    setEditEx]    = useState(null); // { type, ex }
+  const [addExType, setAddExType] = useState(null); // template key string
 
-  const saveDay = (d) => {
-    setProgram(p => p.map(x => x.id === d.id ? { ...x, name: d.name, type: d.type } : x));
-    setEditDay(null);
+  const saveEx = (type, ex) => {
+    setProgram(p => ({ ...p, [type]: { exercises: p[type].exercises.map(e => e.id === ex.id ? ex : e) } }));
+    setEditEx(null);
   };
-  const deleteDay = (id) => { setProgram(p => p.filter(x => x.id !== id)); setEditDay(null); };
-  const addNewDay = (d) => { setProgram(p => [...p, d]); setAddDay(false); };
-  const saveEx = (dayId, ex) => {
-    setProgram(p => p.map(d => d.id === dayId ? { ...d, exercises: d.exercises.map(e => e.id === ex.id ? ex : e) } : d));
-    setEditEx(null); setEditExDay(null);
+
+  const deleteEx = (type, exId) => {
+    setProgram(p => ({ ...p, [type]: { exercises: p[type].exercises.filter(e => e.id !== exId) } }));
+    setEditEx(null);
   };
-  const deleteEx = (dayId, exId) => {
-    setProgram(p => p.map(d => d.id === dayId ? { ...d, exercises: d.exercises.filter(e => e.id !== exId) } : d));
-    setEditEx(null); setEditExDay(null);
+
+  const addEx = (type, ex) => {
+    setProgram(p => ({ ...p, [type]: { exercises: [...p[type].exercises, ex] } }));
+    setAddExType(null);
   };
-  const addEx = (dayId, ex) => {
-    setProgram(p => p.map(d => d.id === dayId ? { ...d, exercises: [...d.exercises, ex] } : d));
-    setAddExDay(null);
+
+  const moveEx = (type, exId, dir) => {
+    setProgram(p => {
+      const exs = [...p[type].exercises];
+      const i = exs.findIndex(e => e.id === exId);
+      const j = i + dir;
+      if (j < 0 || j >= exs.length) return p;
+      [exs[i], exs[j]] = [exs[j], exs[i]];
+      return { ...p, [type]: { exercises: exs } };
+    });
   };
 
   return (
     <div className="content">
-      <div className="section-title">Your program</div>
-      {program.map(day => (
-        <div key={day.id} className="program-day">
-          <div className="program-day-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="prog-day-name">{day.name}</span>
-              <span className={`day-tag ${typeTag(day.type)}`}>{day.type}</span>
-            </div>
-            <button className="prog-edit-btn" onClick={() => setEditDay(day)}>Edit</button>
+      {TEMPLATE_TYPES.map(type => (
+        <div key={type}>
+          <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>{type}</span>
+            <span className={`day-tag ${TYPE_LABEL[type]}`}>{program[type].exercises.length} exercises</span>
           </div>
-          {day.exercises.length > 0 && (
-            <div className="prog-exercises">
-              {day.exercises.map(ex => (
-                <div key={ex.id} className="prog-ex-row">
-                  <span className="prog-ex-name">{ex.name}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="prog-ex-scheme">{ex.sets}×{ex.reps}</span>
-                    <button style={{ fontSize: 13, color: 'var(--text-3)' }} onClick={() => { setEditEx(ex); setEditExDay(day.id); }}>✎</button>
-                  </div>
+
+          <div className="program-day" style={{ margin: '0 16px' }}>
+            {program[type].exercises.length === 0 && (
+              <div className="prog-exercises" style={{ borderTop: 'none' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0' }}>
+                  No exercises yet
                 </div>
-              ))}
-              <button className="add-ex-btn" onClick={() => setAddExDay(day.id)}>+ Add exercise</button>
+              </div>
+            )}
+
+            {program[type].exercises.length > 0 && (
+              <div className="prog-exercises" style={{ borderTop: 'none' }}>
+                {program[type].exercises.map((ex, i) => {
+                  const isFirst = i === 0;
+                  const isLast  = i === program[type].exercises.length - 1;
+                  return (
+                    <div key={ex.id} className="prog-ex-row">
+                      <button
+                        style={{ flex: 1, textAlign: 'left', padding: '2px 0' }}
+                        onClick={() => setEditEx({ type, ex })}
+                      >
+                        <div className="prog-ex-name">{ex.name}</div>
+                        <div className="prog-ex-scheme">
+                          {ex.sets}×{ex.reps}
+                          {ex.lastWeight ? <span style={{ color: 'var(--text-3)', marginLeft: 6 }}>{ex.lastWeight} lbs</span> : null}
+                        </div>
+                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                        <button
+                          className="reorder-btn"
+                          disabled={isFirst}
+                          onClick={() => moveEx(type, ex.id, -1)}
+                        >↑</button>
+                        <button
+                          className="reorder-btn"
+                          disabled={isLast}
+                          onClick={() => moveEx(type, ex.id, 1)}
+                        >↓</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div style={{ padding: '0 0 4px' }}>
+              <button className="add-ex-btn" onClick={() => setAddExType(type)}>+ Add exercise</button>
             </div>
-          )}
-          {day.exercises.length === 0 && day.type !== 'Rest' && (
-            <div className="prog-exercises" style={{ borderTop: '1px solid var(--border)' }}>
-              <button className="add-ex-btn" onClick={() => setAddExDay(day.id)}>+ Add exercise</button>
-            </div>
-          )}
+          </div>
         </div>
       ))}
-      <button className="add-day-btn" onClick={() => setAddDay(true)}>+ Add day</button>
 
-      {editDay && <DaySheet day={editDay} onSave={saveDay} onDelete={deleteDay} onClose={() => setEditDay(null)} />}
-      {addDay && <DaySheet onSave={addNewDay} onClose={() => setAddDay(false)} />}
-      {editEx && <ExerciseSheet ex={editEx} onSave={ex => saveEx(editExDay, ex)} onDelete={id => deleteEx(editExDay, id)} onClose={() => { setEditEx(null); setEditExDay(null); }} />}
-      {addExDay && <ExerciseSheet onSave={ex => addEx(addExDay, ex)} onClose={() => setAddExDay(null)} />}
+      <div style={{ height: 20 }} />
+
+      {editEx && (
+        <ExerciseSheet
+          ex={editEx.ex}
+          onSave={ex => saveEx(editEx.type, ex)}
+          onDelete={id => deleteEx(editEx.type, id)}
+          onClose={() => setEditEx(null)}
+        />
+      )}
+      {addExType && (
+        <ExerciseSheet
+          onSave={ex => addEx(addExType, ex)}
+          onClose={() => setAddExType(null)}
+        />
+      )}
     </div>
   );
 }
