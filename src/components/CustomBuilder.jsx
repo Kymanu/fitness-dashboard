@@ -1,25 +1,37 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { uid } from '../utils/helpers';
 
+const EXERCISE_LIBRARY = {
+  Chest:     ['BB Bench Press', 'DB Bench Press', 'Incline BB Press', 'Incline DB Press', 'Decline Press', 'Cable Flys', 'DB Flys', 'Chest Dips', 'Push Ups', 'Pec Dec'],
+  Back:      ['Pull Ups', 'Chin Ups', 'BB Row', 'DB Row', 'Cable Row', 'Lat Pulldown', 'T-Bar Row', 'Face Pulls', 'Straight Arm Pulldown', 'Deadlift', 'RDL', 'Rack Pull'],
+  Shoulders: ['BB Overhead Press', 'DB Shoulder Press', 'Arnold Press', 'Lateral Raises', 'Front Raises', 'Rear Delt Flys', 'Cable Lateral Raises', 'Upright Row', 'Shrugs'],
+  Arms:      ['BB Curl', 'DB Curl', 'Hammer Curl', 'Cable Curl', 'Preacher Curl', 'Concentration Curl', 'Tricep Pushdowns', 'Overhead Tricep Ext', 'Skull Crushers', 'Close Grip Bench', 'Dips'],
+  Legs:      ['BB Squat', 'Front Squat', 'Leg Press', 'RDL', 'Walking Lunges', 'Leg Extension', 'Leg Curl', 'Hip Thrust', 'Bulgarian Split Squat', 'Standing Calf Raises', 'Seated Calf Raises', 'Hack Squat'],
+  Core:      ['Planks', 'Hanging Leg Raises', 'Cable Crunches', 'Ab Wheel', 'Russian Twists', 'Decline Sit Ups', 'Pallof Press'],
+};
+
+const CATEGORIES = Object.keys(EXERCISE_LIBRARY);
+
 export default function CustomBuilder({ onStart, onCancel }) {
-  const [exercises,  setExercises]  = useState([]);
-  const [draftName,  setDraftName]  = useState('');
-  const [draftSets,  setDraftSets]  = useState('3');
-  const [draftReps,  setDraftReps]  = useState('');
-  const nameRef = useRef(null);
+  const [exercises,     setExercises]     = useState([]);
+  const [draftCategory, setDraftCategory] = useState(CATEGORIES[0]);
+  const [draftExercise, setDraftExercise] = useState(EXERCISE_LIBRARY[CATEGORIES[0]][0]);
+  const [draftSets,     setDraftSets]     = useState('3');
+  const [draftReps,     setDraftReps]     = useState('');
+
+  const handleCategoryChange = (cat) => {
+    setDraftCategory(cat);
+    setDraftExercise(EXERCISE_LIBRARY[cat][0]);
+  };
 
   const addExercise = () => {
-    const name = draftName.trim();
-    if (!name) return;
     setExercises(prev => [...prev, {
       id: uid(),
-      name,
+      name: draftExercise,
       sets: Math.max(1, parseInt(draftSets, 10) || 3),
       reps: draftReps.trim() || '8–12',
       lastWeight: '',
     }]);
-    setDraftName('');
-    nameRef.current?.focus();
   };
 
   const removeExercise = (id) => setExercises(prev => prev.filter(e => e.id !== id));
@@ -37,7 +49,7 @@ export default function CustomBuilder({ onStart, onCancel }) {
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2 }}>
             {exCount === 0
-              ? 'Add exercises below'
+              ? 'Pick exercises below'
               : `${exCount} exercise${exCount !== 1 ? 's' : ''} added`}
           </div>
         </div>
@@ -53,9 +65,7 @@ export default function CustomBuilder({ onStart, onCancel }) {
                   <div className="builder-ex-name">{ex.name}</div>
                   <div className="builder-ex-scheme">{ex.sets} sets · {ex.reps} reps</div>
                 </div>
-                <button className="builder-remove-btn" onClick={() => removeExercise(ex.id)}>
-                  ×
-                </button>
+                <button className="builder-remove-btn" onClick={() => removeExercise(ex.id)}>×</button>
               </div>
             ))}
           </>
@@ -63,18 +73,37 @@ export default function CustomBuilder({ onStart, onCancel }) {
 
         <div className="section-title">Add exercise</div>
         <div className="builder-add-form">
-          <div className="field-label">Exercise name</div>
-          <input
-            ref={nameRef}
-            className="field-input"
-            placeholder="e.g. DB Bicep Curl"
-            value={draftName}
-            onChange={e => setDraftName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') addExercise(); }}
-            autoComplete="off"
-            autoCapitalize="words"
-          />
-          <div className="field-row">
+
+          {/* Category pills */}
+          <div className="field-label">Muscle group</div>
+          <div className="cat-pills">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                className={`cat-pill ${draftCategory === cat ? 'active' : ''}`}
+                onClick={() => handleCategoryChange(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Exercise select — re-renders when category changes */}
+          <div className="field-label" style={{ marginTop: 14 }}>Exercise</div>
+          <div className="builder-select-wrap">
+            <select
+              className="builder-select"
+              value={draftExercise}
+              onChange={e => setDraftExercise(e.target.value)}
+            >
+              {EXERCISE_LIBRARY[draftCategory].map(ex => (
+                <option key={ex} value={ex}>{ex}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sets + Reps */}
+          <div className="field-row" style={{ marginTop: 12 }}>
             <div>
               <div className="field-label">Sets</div>
               <input
@@ -95,11 +124,8 @@ export default function CustomBuilder({ onStart, onCancel }) {
               />
             </div>
           </div>
-          <button
-            className="builder-add-btn"
-            onClick={addExercise}
-            disabled={!draftName.trim()}
-          >
+
+          <button className="builder-add-btn" onClick={addExercise} style={{ marginTop: 12 }}>
             + Add to workout
           </button>
         </div>
