@@ -115,6 +115,10 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .set-check.checked { background: var(--green-bg); border-color: rgba(74,222,128,0.3); }
 .add-set-btn { width: 100%; padding: 8px; font-size: 13px; color: var(--text-2); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); margin-top: 4px; }
 .finish-btn { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 398px; padding: 15px; background: var(--accent); color: white; border-radius: 14px; font-size: 16px; font-weight: 700; letter-spacing: -0.3px; z-index: 90; }
+.discard-link { position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--text-3); padding: 6px 24px; background: none; border: none; cursor: pointer; z-index: 90; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+.discard-link:active { color: #f87171; }
+.btn-destructive { width: 100%; padding: 14px; background: #3d1515; border: 1px solid #7f2a2a; color: #f87171; border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; }
+.btn-destructive:active { opacity: .8; }
 .timer-pill { background: var(--accent-bg); border: 1px solid var(--accent-border); border-radius: 20px; padding: 5px 14px; font-size: 14px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; transition: background .2s, color .2s, border-color .2s; }
 .timer-paused { background: var(--surface2) !important; border-color: var(--border-strong) !important; color: var(--text-3) !important; }
 .session-back-btn { width: 34px; height: 34px; border-radius: 9px; background: var(--surface2); border: 1px solid var(--border-strong); color: var(--text); font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; padding-bottom: 1px; }

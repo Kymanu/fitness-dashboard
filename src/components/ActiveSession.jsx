@@ -9,16 +9,17 @@ function exState(setRows) {
   return 'active';
 }
 
-export default function ActiveSession({ day, onFinish, onMinimize, prs, setPrs }) {
+export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, prs, setPrs }) {
   const timer = useTimer();
   const [sets, setSets] = useState(() =>
     day.exercises.map(ex => Array.from({ length: ex.sets }, () => ({
       id: uid(), weight: ex.lastWeight || '', reps: '', done: false,
     })))
   );
-  const [newPrs,     setNewPrs]     = useState([]);
-  const [pickingDay, setPickingDay] = useState(false);
-  const [pendingLog, setPendingLog] = useState(null);
+  const [newPrs,      setNewPrs]      = useState([]);
+  const [pickingDay,  setPickingDay]  = useState(false);
+  const [pendingLog,  setPendingLog]  = useState(null);
+  const [showDiscard, setShowDiscard] = useState(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { timer.start(); }, []);
@@ -68,7 +69,6 @@ export default function ActiveSession({ day, onFinish, onMinimize, prs, setPrs }
     timer.running ? timer.pause() : timer.resume();
   };
 
-  // Pause timer and return to main tabs — session state is preserved in the DOM
   const handleMinimize = () => {
     timer.pause();
     onMinimize();
@@ -125,6 +125,28 @@ export default function ActiveSession({ day, onFinish, onMinimize, prs, setPrs }
         </div>
       )}
 
+      {/* Discard confirmation */}
+      {showDiscard && (
+        <div className="sheet-overlay">
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-title">Discard session?</div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 20 }}>
+              All logged sets will be lost. This cannot be undone.
+            </div>
+            <button className="btn-destructive" onClick={onDiscard}>
+              Discard session
+            </button>
+            <button
+              style={{ marginTop: 10, width: '100%', padding: '13px', fontSize: 14, fontWeight: 500, color: 'var(--text)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+              onClick={() => setShowDiscard(false)}
+            >
+              Keep training
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="session-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -168,10 +190,10 @@ export default function ActiveSession({ day, onFinish, onMinimize, prs, setPrs }
         )}
 
         {day.exercises.map((ex, exIdx) => {
-          const state  = exStates[exIdx];
-          const isDone = state === 'done';
+          const state    = exStates[exIdx];
+          const isDone   = state === 'done';
           const isActive = state === 'active';
-          const isPr   = newPrs.includes(ex.name);
+          const isPr     = newPrs.includes(ex.name);
 
           return (
             <div
@@ -216,9 +238,12 @@ export default function ActiveSession({ day, onFinish, onMinimize, prs, setPrs }
             </div>
           );
         })}
-        <div style={{ height: 80 }} />
+        <div style={{ height: 100 }} />
       </div>
 
+      <button className="discard-link" onClick={() => setShowDiscard(true)}>
+        Discard session
+      </button>
       <button className="finish-btn" onClick={handleFinishClick}>Finish session</button>
     </div>
   );

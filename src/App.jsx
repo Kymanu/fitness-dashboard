@@ -36,6 +36,11 @@ export default function App() {
     setSessionMinimized(false);
   };
 
+  const handleDiscard = () => {
+    setActiveSession(null);
+    setSessionMinimized(false);
+  };
+
   const handleFinish = (log) => {
     setHistory(h => [...h, log]);
     setActiveSession(null);
@@ -59,6 +64,7 @@ export default function App() {
             day={activeSession}
             onFinish={handleFinish}
             onMinimize={handleMinimize}
+            onDiscard={handleDiscard}
             prs={prs}
             setPrs={setPrs}
           />
