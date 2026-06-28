@@ -5,6 +5,7 @@ import TodayTab from './components/TodayTab';
 import ProgramTab from './components/ProgramTab';
 import ProgressTab from './components/ProgressTab';
 import ActiveSession from './components/ActiveSession';
+import CustomBuilder from './components/CustomBuilder';
 
 export default function App() {
   const [tab, setTab] = useState('today');
@@ -17,6 +18,7 @@ export default function App() {
   const [prs,              setPrs]              = useState(() => load('lift_prs', {}));
   const [activeSession,    setActiveSession]    = useState(null);
   const [sessionMinimized, setSessionMinimized] = useState(false);
+  const [buildingCustom,   setBuildingCustom]   = useState(false);
 
   useEffect(() => { save('lift_program', program); }, [program]);
   useEffect(() => { save('lift_history', history); }, [history]);
@@ -25,16 +27,17 @@ export default function App() {
   const handleStart = (day) => {
     setActiveSession(day);
     setSessionMinimized(false);
+    setBuildingCustom(false);
   };
+
+  const handleBuildCustom = () => setBuildingCustom(true);
 
   const handleMinimize = () => {
     setSessionMinimized(true);
     setTab('today');
   };
 
-  const handleResume = () => {
-    setSessionMinimized(false);
-  };
+  const handleResume = () => setSessionMinimized(false);
 
   const handleDiscard = () => {
     setActiveSession(null);
@@ -54,11 +57,15 @@ export default function App() {
     { id: 'progress', label: 'Progress', icon: '📈' },
   ];
 
+  // Determine which fullscreen view wins (at most one at a time)
+  const showSession  = !!activeSession;
+  const showBuilder  = !activeSession && buildingCustom;
+  const showTabShell = (!activeSession || sessionMinimized) && !buildingCustom;
+
   return (
     <>
-      {/* ActiveSession stays mounted whenever a session exists so React
-          preserves all set/timer state. Hidden via display:none when minimized. */}
-      {activeSession && (
+      {/* ActiveSession — mounted whenever a session exists to preserve state */}
+      {showSession && (
         <div style={sessionMinimized ? { display: 'none' } : { flex: 1, minHeight: 0 }}>
           <ActiveSession
             day={activeSession}
@@ -71,13 +78,24 @@ export default function App() {
         </div>
       )}
 
-      {/* Tab shell — visible when there is no active session, or it is minimized */}
-      {(!activeSession || sessionMinimized) && (
+      {/* Custom workout builder */}
+      {showBuilder && (
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <CustomBuilder
+            onStart={(exercises) => handleStart({ name: 'Custom', type: 'Custom', exercises })}
+            onCancel={() => setBuildingCustom(false)}
+          />
+        </div>
+      )}
+
+      {/* Tab shell */}
+      {showTabShell && (
         <div className="app">
           {tab === 'today' && (
             <TodayTab
               program={program}
               onStart={handleStart}
+              onBuildCustom={handleBuildCustom}
               minimizedSession={sessionMinimized ? activeSession : null}
               onResume={handleResume}
             />

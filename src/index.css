@@ -115,6 +115,18 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .set-check.checked { background: var(--green-bg); border-color: rgba(74,222,128,0.3); }
 .add-set-btn { width: 100%; padding: 8px; font-size: 13px; color: var(--text-2); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); margin-top: 4px; }
 .finish-btn { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 398px; padding: 15px; background: var(--accent); color: white; border-radius: 14px; font-size: 16px; font-weight: 700; letter-spacing: -0.3px; z-index: 90; }
+.finish-btn:disabled { opacity: .4; }
+
+/* Custom workout builder */
+.builder-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 50px 16px 14px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; }
+.builder-ex-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin: 0 16px 8px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+.builder-ex-name { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+.builder-ex-scheme { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.builder-remove-btn { width: 28px; height: 28px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border-strong); color: var(--text-3); font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
+.builder-add-form { margin: 0 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.builder-add-btn { width: 100%; padding: 11px; border: 1px dashed var(--accent-border); border-radius: var(--radius); color: var(--accent); font-size: 14px; font-weight: 600; }
+.builder-add-btn:disabled { opacity: .4; }
+
 .discard-link { position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--text-3); padding: 6px 24px; background: none; border: none; cursor: pointer; z-index: 90; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
 .discard-link:active { color: #f87171; }
 .btn-destructive { width: 100%; padding: 14px; background: #3d1515; border: 1px solid #7f2a2a; color: #f87171; border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; }

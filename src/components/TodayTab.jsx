@@ -7,14 +7,9 @@ const WORKOUT_META = {
   Legs: { style: 'wbtn-legs', abbr: 'L'  },
 };
 
-export default function TodayTab({ program, onStart, minimizedSession, onResume }) {
-  const start = (key) => {
-    if (key === 'Custom') {
-      onStart({ name: 'Custom', type: 'Custom', exercises: [] });
-    } else {
-      onStart({ name: key, type: key, exercises: program[key].exercises });
-    }
-  };
+export default function TodayTab({ program, onStart, onBuildCustom, minimizedSession, onResume }) {
+  const start = (key) =>
+    onStart({ name: key, type: key, exercises: program[key].exercises });
 
   return (
     <div className="content">
@@ -25,7 +20,6 @@ export default function TodayTab({ program, onStart, minimizedSession, onResume 
         </div>
       </div>
 
-      {/* Resume banner — shown when a session is running in the background */}
       {minimizedSession && (
         <button className="resume-banner" onClick={onResume}>
           <div>
@@ -60,11 +54,12 @@ export default function TodayTab({ program, onStart, minimizedSession, onResume 
           );
         })}
 
-        <button className="workout-btn wbtn-custom" onClick={() => start('Custom')}>
+        {/* Custom opens the builder, not a blank session */}
+        <button className="workout-btn wbtn-custom" onClick={onBuildCustom}>
           <div className="wbtn-abbr">+</div>
           <div>
             <div className="wbtn-name">Custom</div>
-            <div className="wbtn-count">Blank session</div>
+            <div className="wbtn-count">Build your own</div>
           </div>
         </button>
       </div>
