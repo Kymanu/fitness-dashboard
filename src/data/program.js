@@ -1,0 +1,56 @@
+export const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+export const DEFAULT_PROGRAM = [
+  { id: 'mon', name: 'Monday', type: 'Push', exercises: [
+    { id: 'e1', name: 'BB Bench Press', sets: 4, reps: '6–8', lastWeight: 155 },
+    { id: 'e2', name: 'DB Incline Press', sets: 3, reps: '8–10', lastWeight: 70 },
+    { id: 'e3', name: 'DB Shoulder Press', sets: 4, reps: '8–10', lastWeight: 55 },
+    { id: 'e4', name: 'Cable Flys', sets: 3, reps: '12–15', lastWeight: 30 },
+    { id: 'e5', name: 'Lateral Raises', sets: 4, reps: '12–15', lastWeight: 27 },
+    { id: 'e6', name: 'Tricep Pushdowns', sets: 3, reps: '12–15', lastWeight: 45 },
+    { id: 'e7', name: 'Overhead Tricep Ext', sets: 3, reps: '10–12', lastWeight: 35 },
+  ]},
+  { id: 'tue', name: 'Tuesday', type: 'Pull', exercises: [
+    { id: 'e8', name: 'RDL', sets: 4, reps: '8–10', lastWeight: 185 },
+    { id: 'e9', name: 'Pull Ups', sets: 4, reps: '8–10', lastWeight: 0 },
+    { id: 'e10', name: 'Cable Row', sets: 4, reps: '8–10', lastWeight: 120 },
+    { id: 'e11', name: 'Lat Pulldown', sets: 3, reps: '10–12', lastWeight: 110 },
+    { id: 'e12', name: 'DB Row', sets: 3, reps: '10–12', lastWeight: 80 },
+    { id: 'e13', name: 'Face Pulls', sets: 3, reps: '15–20', lastWeight: 40 },
+    { id: 'e14', name: 'Curls', sets: 3, reps: '10–12', lastWeight: 35 },
+    { id: 'e15', name: 'Hammer Curl', sets: 3, reps: '10–12', lastWeight: 35 },
+  ]},
+  { id: 'wed', name: 'Wednesday', type: 'Legs', exercises: [
+    { id: 'e16', name: 'BB Squat', sets: 4, reps: '6–8', lastWeight: 185 },
+    { id: 'e17', name: 'Leg Press', sets: 4, reps: '8–10', lastWeight: 270 },
+    { id: 'e18', name: 'Romanian Deadlift', sets: 3, reps: '8–10', lastWeight: 155 },
+    { id: 'e19', name: 'Leg Extension', sets: 3, reps: '12–15', lastWeight: 110 },
+    { id: 'e20', name: 'Leg Curl', sets: 3, reps: '12–15', lastWeight: 90 },
+    { id: 'e21', name: 'Walking Lunges', sets: 3, reps: '12/leg', lastWeight: 40 },
+    { id: 'e22', name: 'Standing Calf Raises', sets: 4, reps: '15–20', lastWeight: 135 },
+  ]},
+  { id: 'thu', name: 'Thursday', type: 'Push', exercises: [
+    { id: 'e23', name: 'BB Bench Press', sets: 4, reps: '6–8', lastWeight: 155 },
+    { id: 'e24', name: 'DB Incline Press', sets: 3, reps: '8–10', lastWeight: 70 },
+    { id: 'e25', name: 'DB Shoulder Press', sets: 4, reps: '8–10', lastWeight: 55 },
+    { id: 'e26', name: 'Cable Flys', sets: 3, reps: '12–15', lastWeight: 30 },
+    { id: 'e27', name: 'Lateral Raises', sets: 4, reps: '12–15', lastWeight: 27 },
+    { id: 'e28', name: 'Tricep Pushdowns', sets: 3, reps: '12–15', lastWeight: 45 },
+  ]},
+  { id: 'fri', name: 'Friday', type: 'Pull', exercises: [
+    { id: 'e29', name: 'RDL', sets: 4, reps: '8–10', lastWeight: 185 },
+    { id: 'e30', name: 'Pull Ups', sets: 4, reps: '8–10', lastWeight: 0 },
+    { id: 'e31', name: 'Cable Row', sets: 4, reps: '8–10', lastWeight: 120 },
+    { id: 'e32', name: 'Lat Pulldown', sets: 3, reps: '10–12', lastWeight: 110 },
+    { id: 'e33', name: 'DB Row', sets: 3, reps: '10–12', lastWeight: 80 },
+    { id: 'e34', name: 'Hammer Curl', sets: 3, reps: '10–12', lastWeight: 35 },
+  ]},
+  { id: 'sat', name: 'Saturday', type: 'Legs', exercises: [
+    { id: 'e35', name: 'BB Squat', sets: 4, reps: '6–8', lastWeight: 185 },
+    { id: 'e36', name: 'Leg Press', sets: 4, reps: '8–10', lastWeight: 270 },
+    { id: 'e37', name: 'Romanian Deadlift', sets: 3, reps: '8–10', lastWeight: 155 },
+    { id: 'e38', name: 'Leg Extension', sets: 3, reps: '12–15', lastWeight: 110 },
+    { id: 'e39', name: 'Seated Calf Raises', sets: 3, reps: '15–20', lastWeight: 90 },
+  ]},
+  { id: 'sun', name: 'Sunday', type: 'Rest', exercises: [] },
+];
