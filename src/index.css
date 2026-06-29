@@ -160,9 +160,8 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .prog-ex-name { font-size: 13px; }
 .prog-ex-scheme { font-size: 12px; color: var(--text-2); }
 .add-ex-btn  { width: 100%; padding: 10px; font-size: 13px; color: var(--accent); border: 1px dashed var(--accent-border); border-radius: var(--radius-sm); margin-top: 8px; }
-.reorder-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface2); color: var(--text-3); font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.reorder-btn:disabled { opacity: .25; cursor: default; }
-.reorder-btn:not(:disabled):active { background: var(--surface3); }
+.edit-minus-btn { width: 22px; height: 22px; border-radius: 50%; background: var(--red); color: #fff; font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding-bottom: 2px; }
+.drag-handle { color: var(--text-3); font-size: 15px; padding: 6px 4px 6px 10px; flex-shrink: 0; touch-action: none; display: flex; align-items: center; cursor: grab; user-select: none; -webkit-user-select: none; }
 .add-day-btn { margin: 4px 16px 16px; width: calc(100% - 32px); padding: 12px; font-size: 14px; color: var(--text-2); border: 1px dashed var(--border-strong); border-radius: var(--radius); }
 
 /* Progress tab */
