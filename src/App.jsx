@@ -19,7 +19,9 @@ export default function App() {
 
   // Session state — check for a persisted session at startup
   const [activeSession,    setActiveSession]    = useState(() => load('lift_session_day', null));
-  const [sessionMinimized, setSessionMinimized] = useState(false);
+  // Always start minimized if restoring from localStorage so fresh loads show the Train grid.
+  // sessionMinimized only becomes false when user explicitly taps Resume or starts a new session.
+  const [sessionMinimized, setSessionMinimized] = useState(() => !!load('lift_session_day', null));
   const [buildingCustom,   setBuildingCustom]   = useState(false);
   const [sessionRestored,  setSessionRestored]  = useState(() => !!load('lift_session_day', null));
   const [sessionKey,       setSessionKey]       = useState('restored');
