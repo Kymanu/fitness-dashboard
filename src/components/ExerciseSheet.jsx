@@ -25,7 +25,7 @@ export default function ExerciseSheet({ ex, onSave, onDelete, onClose }) {
           </div>
         </div>
         <div className="field-label">Last weight (lbs)</div>
-        <input className="field-input" type="number" value={lastWeight} onChange={e => setLastWeight(Number(e.target.value))} />
+        <input className="field-input" type="number" value={lastWeight} onChange={e => setLastWeight(Number(e.target.value) || 0)} />
         <button className="sheet-save" onClick={() => { if (name.trim()) onSave({ id: ex?.id || uid(), name: name.trim(), sets, reps, lastWeight }); }}>Save</button>
         {ex && <button className="sheet-delete" onClick={() => onDelete(ex.id)}>Remove exercise</button>}
       </div>
