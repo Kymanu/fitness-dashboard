@@ -220,3 +220,10 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .chat-input:focus { border-color: var(--accent); outline: none; }
 .chat-send-btn { width: 40px; height: 40px; border-radius: var(--radius); background: var(--accent); color: #fff; font-size: 20px; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .12s; }
 .chat-send-btn:disabled { opacity: .35; cursor: default; }
+
+/* Swipe-to-delete revealed button */
+.swipe-delete-btn { position: absolute; right: 0; top: 0; bottom: 0; background: var(--red); color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+/* In-session exercise edit button */
+.ex-edit-btn { width: 28px; height: 28px; border-radius: 7px; background: var(--surface2); border: 1px solid var(--border-strong); color: var(--text-3); font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: opacity .12s; }
+.ex-edit-btn:active { opacity: .6; }

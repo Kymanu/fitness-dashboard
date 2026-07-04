@@ -39,10 +39,31 @@ export default function App() {
     if (activeSession) save('lift_session_day', activeSession);
   }, [activeSession]);
 
+  // Only called on explicit Finish or Discard — never automatically
   const clearPersistedSession = () => {
     localStorage.removeItem('lift_session_day');
     localStorage.removeItem('lift_session_sets');
     localStorage.removeItem('lift_session_elapsed');
+  };
+
+  const handleDeleteSession = (id) => {
+    setHistory(h => h.filter(s => s.id !== id));
+  };
+
+  const handleDeletePr = (name) => {
+    setPrs(p => {
+      const n = { ...p };
+      delete n[name];
+      return n;
+    });
+  };
+
+  const handleUpdateExercise = (exIdx, updatedEx) => {
+    setActiveSession(prev => {
+      const exercises = [...prev.exercises];
+      exercises[exIdx] = updatedEx;
+      return { ...prev, exercises };
+    });
   };
 
   const handleStart = (day) => {
@@ -100,6 +121,7 @@ export default function App() {
             setPrs={setPrs}
             initialSets={sessionRestored ? initSets : null}
             initialElapsed={sessionRestored ? initElapsed : 0}
+            onUpdateExercise={handleUpdateExercise}
           />
         </div>
       )}
@@ -125,7 +147,7 @@ export default function App() {
             />
           )}
           {tab === 'program'  && <ProgramTab  program={program} setProgram={setProgram} />}
-          {tab === 'progress' && <ProgressTab history={history} prs={prs} />}
+          {tab === 'progress' && <ProgressTab history={history} prs={prs} onDeleteSession={handleDeleteSession} onDeletePr={handleDeletePr} />}
 
           <div className="tab-bar">
             {tabs.map(t => (

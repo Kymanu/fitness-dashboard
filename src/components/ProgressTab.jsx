@@ -2,22 +2,85 @@ import { useState, useRef, useEffect } from 'react';
 import { DAYS_OF_WEEK } from '../data/program';
 import { getTodayIdx, typeTag, formatTime, load, save } from '../utils/helpers';
 
-export default function ProgressTab({ history, prs }) {
+function SwipeableRow({ onDelete, children }) {
+  const [offset, setOffset] = useState(0);
+  const [snapping, setSnapping] = useState(false);
+  const startXRef = useRef(0);
+  const revealedRef = useRef(false);
+  const DELETE_W = 80;
+
+  const handleTouchStart = (e) => {
+    startXRef.current = e.touches[0].clientX;
+    setSnapping(false);
+  };
+
+  const handleTouchMove = (e) => {
+    const dx = e.touches[0].clientX - startXRef.current;
+    if (revealedRef.current) {
+      setOffset(Math.min(0, Math.max(dx - DELETE_W, -DELETE_W)));
+    } else if (dx < 0) {
+      setOffset(Math.max(dx, -DELETE_W));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setSnapping(true);
+    if (offset < -DELETE_W / 2) {
+      setOffset(-DELETE_W);
+      revealedRef.current = true;
+    } else {
+      setOffset(0);
+      revealedRef.current = false;
+    }
+  };
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden' }}>
+      <button className="swipe-delete-btn" style={{ width: DELETE_W }} onClick={onDelete}>
+        Delete
+      </button>
+      <div
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: snapping ? 'transform 0.2s ease' : 'none',
+          background: 'var(--surface)',
+          position: 'relative',
+          zIndex: 1,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr }) {
   const todayIdx = getTodayIdx();
-  const [apiKey,      setApiKey]      = useState(() => load('lift_ai_key', ''));
-  const [keyDraft,    setKeyDraft]    = useState('');
-  const [loading,     setLoading]     = useState(false);
-  const [feedback,    setFeedback]    = useState('');
-  const [aiError,     setAiError]     = useState('');
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput,   setChatInput]   = useState('');
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatError,   setChatError]   = useState('');
+  const [apiKey,       setApiKey]      = useState(() => load('lift_ai_key', ''));
+  const [keyDraft,     setKeyDraft]    = useState('');
+  const [loading,      setLoading]     = useState(false);
+  const [feedback,     setFeedback]    = useState('');
+  const [aiError,      setAiError]     = useState('');
+  const [chatMessages, setChatMessages] = useState(() => load('lift_ai_chat', []));
+  const [chatInput,    setChatInput]   = useState('');
+  const [chatLoading,  setChatLoading] = useState(false);
+  const [chatError,    setChatError]   = useState('');
   const chatEndRef = useRef(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, chatLoading]);
+
+  useEffect(() => {
+    save('lift_ai_chat', chatMessages);
+  }, [chatMessages]);
+
+  const clearChat = () => {
+    setChatMessages([]);
+  };
 
   const buildContext = () => {
     const reversed = [...history].reverse().slice(0, 20);
@@ -100,7 +163,6 @@ export default function ProgressTab({ history, prs }) {
     }
   };
 
-  // Week streak: calendar-based (did you log a session on each day this week?)
   const thisWeek = DAYS_OF_WEEK.map((d, i) => {
     const done = history.some(h => {
       const date = new Date(h.date);
@@ -111,8 +173,8 @@ export default function ProgressTab({ history, prs }) {
     return { label: d, done, today: i === todayIdx };
   });
 
-  const recent  = [...history].reverse().slice(0, 20);
-  const maxVol  = Math.max(...history.map(h => h.totalSets || 0), 1);
+  const recent = [...history].reverse().slice(0, 20);
+  const maxVol = Math.max(...history.map(h => h.totalSets || 0), 1);
 
   return (
     <div className="content">
@@ -133,10 +195,12 @@ export default function ProgressTab({ history, prs }) {
           </div>
         )}
         {Object.entries(prs).map(([name, weight]) => (
-          <div key={name} className="pr-row">
-            <div className="pr-name">{name}</div>
-            <div className="pr-val">{weight} lbs</div>
-          </div>
+          <SwipeableRow key={name} onDelete={() => onDeletePr(name)}>
+            <div className="pr-row">
+              <div className="pr-name">{name}</div>
+              <div className="pr-val">{weight} lbs</div>
+            </div>
+          </SwipeableRow>
         ))}
       </div>
 
@@ -148,29 +212,29 @@ export default function ProgressTab({ history, prs }) {
           </div>
         )}
         {recent.map(h => {
-          const d    = new Date(h.date);
-          const date = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          const dur  = formatTime(h.duration || 0);
-          // dayTag: user-chosen day. Fallback: old entries stored day in dayName.
+          const d       = new Date(h.date);
+          const date    = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const dur     = formatTime(h.duration || 0);
           const dayLabel = h.dayTag || (h.dayName !== h.type ? h.dayName : null);
 
           return (
-            <div key={h.id} className="history-item">
-              <div className="history-date">{date} · {dur}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                {dayLabel && (
-                  <div className="history-name">{dayLabel}</div>
-                )}
-                <span className={`day-tag ${typeTag(h.type)}`}>{h.type}</span>
+            <SwipeableRow key={h.id} onDelete={() => onDeleteSession(h.id)}>
+              <div className="history-item">
+                <div className="history-date">{date} · {dur}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                  {dayLabel && <div className="history-name">{dayLabel}</div>}
+                  <span className={`day-tag ${typeTag(h.type)}`}>{h.type}</span>
+                </div>
+                <div className="history-stats">{h.totalSets} sets logged</div>
+                <div className="vol-bar">
+                  <div className="vol-fill" style={{ width: `${(h.totalSets / maxVol) * 100}%` }} />
+                </div>
               </div>
-              <div className="history-stats">{h.totalSets} sets logged</div>
-              <div className="vol-bar">
-                <div className="vol-fill" style={{ width: `${(h.totalSets / maxVol) * 100}%` }} />
-              </div>
-            </div>
+            </SwipeableRow>
           );
         })}
       </div>
+
       <div className="section-title" style={{ marginTop: 8 }}>AI Trainer</div>
       <div className="card" style={{ margin: '0 16px' }}>
         {!apiKey ? (
@@ -252,12 +316,20 @@ export default function ProgressTab({ history, prs }) {
                 </button>
               </div>
             </div>
-            <button
-              onClick={() => { save('lift_ai_key', ''); setApiKey(''); setFeedback(''); setAiError(''); }}
-              style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 12, display: 'block' }}
-            >
-              Change API key
-            </button>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+              <button
+                onClick={() => { save('lift_ai_key', ''); setApiKey(''); setFeedback(''); setAiError(''); }}
+                style={{ fontSize: 11, color: 'var(--text-3)' }}
+              >
+                Change API key
+              </button>
+              {chatMessages.length > 0 && (
+                <button onClick={clearChat} style={{ fontSize: 11, color: 'var(--red)' }}>
+                  Clear chat
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

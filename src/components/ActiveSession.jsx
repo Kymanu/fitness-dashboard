@@ -14,17 +14,20 @@ const selectOnFocus = (e) => {
   requestAnimationFrame(() => el.select());
 };
 
-export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, prs, setPrs, initialSets, initialElapsed }) {
+export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, prs, setPrs, initialSets, initialElapsed, onUpdateExercise }) {
   const timer = useTimer(initialElapsed || 0);
+  const [localExercises, setLocalExercises] = useState(day.exercises);
   const [sets, setSets] = useState(() =>
     initialSets || day.exercises.map(ex => Array.from({ length: ex.sets }, () => ({
       id: uid(), weight: ex.lastWeight || '', reps: '', done: false,
     })))
   );
-  const [newPrs,      setNewPrs]      = useState([]);
-  const [pickingDay,  setPickingDay]  = useState(false);
-  const [pendingLog,  setPendingLog]  = useState(null);
-  const [showDiscard, setShowDiscard] = useState(false);
+  const [newPrs,       setNewPrs]       = useState([]);
+  const [pickingDay,   setPickingDay]   = useState(false);
+  const [pendingLog,   setPendingLog]   = useState(null);
+  const [showDiscard,  setShowDiscard]  = useState(false);
+  const [editingExIdx, setEditingExIdx] = useState(null);
+  const [editDraft,    setEditDraft]    = useState({ sets: '', reps: '', lastWeight: '' });
 
   // Fresh sessions auto-start; restored sessions stay paused at initialElapsed
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -38,7 +41,7 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
 
   const exStates    = sets.map(exState);
   const doneExs     = exStates.filter(s => s === 'done').length;
-  const totalExs    = day.exercises.length;
+  const totalExs    = localExercises.length;
   const progressPct = totalExs > 0 ? (doneExs / totalExs) * 100 : 0;
 
   const updateSet = (exIdx, setIdx, field, val) => {
@@ -56,7 +59,7 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
       const nowDone = !s.done;
       n[exIdx][setIdx] = { ...s, done: nowDone };
       if (nowDone && s.weight) {
-        const ex = day.exercises[exIdx];
+        const ex = localExercises[exIdx];
         const w = Number(s.weight);
         const prevPr = prs[ex.name] || 0;
         if (w > prevPr) {
@@ -75,6 +78,46 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
       n[exIdx].push({ id: uid(), weight: last?.weight || '', reps: '', done: false });
       return n;
     });
+  };
+
+  const openEdit = (exIdx) => {
+    const ex = localExercises[exIdx];
+    setEditDraft({ sets: String(ex.sets || ''), reps: ex.reps || '', lastWeight: String(ex.lastWeight || '') });
+    setEditingExIdx(exIdx);
+  };
+
+  const applyEdit = () => {
+    if (editingExIdx === null) return;
+    const exIdx = editingExIdx;
+    const oldEx = localExercises[exIdx];
+    const newSetCount = parseInt(editDraft.sets) || oldEx.sets;
+    const newReps = editDraft.reps || oldEx.reps;
+    const newWeight = editDraft.lastWeight !== '' ? Number(editDraft.lastWeight) : oldEx.lastWeight;
+    const updatedEx = { ...oldEx, sets: newSetCount, reps: newReps, lastWeight: newWeight };
+
+    setLocalExercises(prev => {
+      const n = [...prev];
+      n[exIdx] = updatedEx;
+      return n;
+    });
+
+    if (newSetCount !== oldEx.sets) {
+      setSets(prev => {
+        const n = prev.map(s => [...s]);
+        if (newSetCount > n[exIdx].length) {
+          const last = n[exIdx][n[exIdx].length - 1];
+          for (let i = n[exIdx].length; i < newSetCount; i++) {
+            n[exIdx].push({ id: uid(), weight: last?.weight || '', reps: '', done: false });
+          }
+        } else {
+          n[exIdx] = n[exIdx].slice(0, newSetCount);
+        }
+        return n;
+      });
+    }
+
+    onUpdateExercise?.(exIdx, updatedEx);
+    setEditingExIdx(null);
   };
 
   const handlePauseToggle = () => {
@@ -96,7 +139,7 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
       date: new Date().toISOString(),
       duration: timer.elapsed,
       totalSets: doneSets,
-      exercises: day.exercises.map((ex, i) => ({
+      exercises: localExercises.map((ex, i) => ({
         name: ex.name,
         sets: sets[i].filter(s => s.done).map(s => ({ weight: s.weight, reps: s.reps })),
       })),
@@ -159,6 +202,55 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
         </div>
       )}
 
+      {/* Mid-session exercise edit */}
+      {editingExIdx !== null && (
+        <div className="sheet-overlay">
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-title">Edit {localExercises[editingExIdx]?.name}</div>
+            <div className="field-row" style={{ marginBottom: 12 }}>
+              <div>
+                <div className="field-label">Sets</div>
+                <input
+                  className="field-input"
+                  style={{ marginBottom: 0 }}
+                  type="number"
+                  value={editDraft.sets}
+                  onChange={e => setEditDraft(d => ({ ...d, sets: e.target.value }))}
+                  onFocus={selectOnFocus}
+                />
+              </div>
+              <div>
+                <div className="field-label">Reps</div>
+                <input
+                  className="field-input"
+                  style={{ marginBottom: 0 }}
+                  type="text"
+                  value={editDraft.reps}
+                  onChange={e => setEditDraft(d => ({ ...d, reps: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="field-label">Target weight (lbs)</div>
+            <input
+              className="field-input"
+              type="number"
+              placeholder="0"
+              value={editDraft.lastWeight}
+              onChange={e => setEditDraft(d => ({ ...d, lastWeight: e.target.value }))}
+              onFocus={selectOnFocus}
+            />
+            <button className="sheet-save" onClick={applyEdit}>Apply</button>
+            <button
+              style={{ marginTop: 10, width: '100%', padding: '12px', fontSize: 14, color: 'var(--text-3)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+              onClick={() => setEditingExIdx(null)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="session-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -195,13 +287,13 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
 
       {/* Exercise cards */}
       <div className="content" style={{ paddingTop: 12 }}>
-        {day.exercises.length === 0 && (
+        {localExercises.length === 0 && (
           <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
             Custom session — tap Finish when you're done.
           </div>
         )}
 
-        {day.exercises.map((ex, exIdx) => {
+        {localExercises.map((ex, exIdx) => {
           const state    = exStates[exIdx];
           const isDone   = state === 'done';
           const isActive = state === 'active';
@@ -220,6 +312,9 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   {isPr   && <span className="ex-badge pr">PR</span>}
                   {isDone && <span className="ex-badge ex-done-badge">✓ Done</span>}
+                  <button className="ex-edit-btn" onClick={() => openEdit(exIdx)} title="Edit exercise">
+                    ✏
+                  </button>
                 </div>
               </div>
 
