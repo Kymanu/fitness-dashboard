@@ -108,7 +108,7 @@ export default function App() {
   ];
 
   const showSession  = !!activeSession;
-  const showBuilder  = !activeSession && buildingCustom;
+  const showBuilder  = buildingCustom;
   const showTabShell = (!activeSession || sessionMinimized) && !buildingCustom;
 
   return (
