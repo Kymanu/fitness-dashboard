@@ -224,6 +224,10 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 /* Swipe-to-delete revealed button */
 .swipe-delete-btn { position: absolute; right: 0; top: 0; bottom: 0; background: var(--red); color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
+/* In-session add exercise button */
+.add-ex-session-btn { width: calc(100% - 32px); margin: 4px 16px 0; padding: 12px; font-size: 14px; font-weight: 600; color: var(--accent); border: 1px dashed var(--accent-border); border-radius: var(--radius); -webkit-tap-highlight-color: transparent; transition: opacity .12s; }
+.add-ex-session-btn:active { opacity: .7; }
+
 /* In-session exercise edit button */
 .ex-edit-btn { width: 28px; height: 28px; border-radius: 7px; background: var(--surface2); border: 1px solid var(--border-strong); color: var(--text-3); font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: opacity .12s; }
 .ex-edit-btn:active { opacity: .6; }

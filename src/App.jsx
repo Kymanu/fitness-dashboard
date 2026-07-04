@@ -66,6 +66,10 @@ export default function App() {
     });
   };
 
+  const handleAddExercise = (newEx) => {
+    setActiveSession(prev => ({ ...prev, exercises: [...prev.exercises, newEx] }));
+  };
+
   const handleStart = (day) => {
     setSessionKey((day.type || 'custom') + '_' + Date.now());
     setSessionRestored(false);
@@ -122,6 +126,7 @@ export default function App() {
             initialSets={sessionRestored ? initSets : null}
             initialElapsed={sessionRestored ? initElapsed : 0}
             onUpdateExercise={handleUpdateExercise}
+            onAddExercise={handleAddExercise}
           />
         </div>
       )}

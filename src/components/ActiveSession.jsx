@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { uid, save, typeTag, formatTime, FULL_DAYS } from '../utils/helpers';
 import { useTimer } from '../hooks/useTimer';
+import { EXERCISE_LIBRARY, CATEGORIES } from '../data/exercises';
 
 function exState(setRows) {
   const done = setRows.filter(s => s.done).length;
@@ -14,7 +15,7 @@ const selectOnFocus = (e) => {
   requestAnimationFrame(() => el.select());
 };
 
-export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, prs, setPrs, initialSets, initialElapsed, onUpdateExercise }) {
+export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, prs, setPrs, initialSets, initialElapsed, onUpdateExercise, onAddExercise }) {
   const timer = useTimer(initialElapsed || 0);
   const [localExercises, setLocalExercises] = useState(day.exercises);
   const [sets, setSets] = useState(() =>
@@ -28,6 +29,11 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
   const [showDiscard,  setShowDiscard]  = useState(false);
   const [editingExIdx, setEditingExIdx] = useState(null);
   const [editDraft,    setEditDraft]    = useState({ sets: '', reps: '', lastWeight: '' });
+  const [showAddEx,    setShowAddEx]    = useState(false);
+  const [addCategory,  setAddCategory]  = useState(CATEGORIES[0]);
+  const [addExName,    setAddExName]    = useState(EXERCISE_LIBRARY[CATEGORIES[0]][0]);
+  const [addSets,      setAddSets]      = useState('3');
+  const [addReps,      setAddReps]      = useState('');
 
   // Fresh sessions auto-start; restored sessions stay paused at initialElapsed
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,6 +124,29 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
 
     onUpdateExercise?.(exIdx, updatedEx);
     setEditingExIdx(null);
+  };
+
+  const handleAddCategory = (cat) => {
+    setAddCategory(cat);
+    setAddExName(EXERCISE_LIBRARY[cat][0]);
+  };
+
+  const confirmAddExercise = () => {
+    const newEx = {
+      id: uid(),
+      name: addExName,
+      sets: Math.max(1, parseInt(addSets, 10) || 3),
+      reps: addReps.trim() || '8–12',
+      lastWeight: '',
+    };
+    setLocalExercises(prev => [...prev, newEx]);
+    setSets(prev => [...prev, Array.from({ length: newEx.sets }, () => ({
+      id: uid(), weight: '', reps: '', done: false,
+    }))]);
+    onAddExercise?.(newEx);
+    setShowAddEx(false);
+    setAddReps('');
+    setAddSets('3');
   };
 
   const handlePauseToggle = () => {
@@ -251,6 +280,76 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
         </div>
       )}
 
+      {/* Add exercise picker */}
+      {showAddEx && (
+        <div className="sheet-overlay">
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-title">Add exercise</div>
+
+            <div className="field-label">Muscle group</div>
+            <div className="cat-pills" style={{ marginBottom: 14 }}>
+              {CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  className={`cat-pill ${addCategory === cat ? 'active' : ''}`}
+                  onClick={() => handleAddCategory(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            <div className="field-label">Exercise</div>
+            <div className="builder-select-wrap" style={{ marginBottom: 12 }}>
+              <select
+                className="builder-select"
+                value={addExName}
+                onChange={e => setAddExName(e.target.value)}
+              >
+                {EXERCISE_LIBRARY[addCategory].map(ex => (
+                  <option key={ex} value={ex}>{ex}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field-row" style={{ marginBottom: 16 }}>
+              <div>
+                <div className="field-label">Sets</div>
+                <input
+                  className="field-input"
+                  style={{ marginBottom: 0 }}
+                  type="number"
+                  min="1"
+                  value={addSets}
+                  onChange={e => setAddSets(e.target.value)}
+                  onFocus={selectOnFocus}
+                />
+              </div>
+              <div>
+                <div className="field-label">Reps</div>
+                <input
+                  className="field-input"
+                  style={{ marginBottom: 0 }}
+                  type="text"
+                  placeholder="e.g. 8–12"
+                  value={addReps}
+                  onChange={e => setAddReps(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <button className="sheet-save" onClick={confirmAddExercise}>Add to session</button>
+            <button
+              style={{ marginTop: 10, width: '100%', padding: '12px', fontSize: 14, color: 'var(--text-3)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}
+              onClick={() => setShowAddEx(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="session-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -347,6 +446,9 @@ export default function ActiveSession({ day, onFinish, onMinimize, onDiscard, pr
             </div>
           );
         })}
+        <button className="add-ex-session-btn" onClick={() => setShowAddEx(true)}>
+          + Add exercise
+        </button>
         <div style={{ height: 100 }} />
       </div>
 
