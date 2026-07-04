@@ -221,6 +221,11 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .chat-send-btn { width: 40px; height: 40px; border-radius: var(--radius); background: var(--accent); color: #fff; font-size: 20px; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .12s; }
 .chat-send-btn:disabled { opacity: .35; cursor: default; }
 
+/* Deployment update banner */
+.update-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: var(--accent-bg); border-bottom: 1px solid var(--accent-border); font-size: 13px; color: var(--accent); flex-shrink: 0; }
+.update-banner-close { font-size: 20px; color: var(--accent); padding: 0 4px; line-height: 1; opacity: 0.6; }
+.update-banner-close:active { opacity: 1; }
+
 /* Swipe-to-delete revealed button */
 .swipe-delete-btn { position: absolute; right: 0; top: 0; bottom: 0; background: var(--red); color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 

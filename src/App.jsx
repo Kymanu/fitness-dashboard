@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { load, save } from './utils/helpers';
+
+/* global __BUILD_TIME__ */
+const BUILD_TIME  = __BUILD_TIME__;
+const BANNER_KEY  = 'lift_update_banner';
 import { DEFAULT_PROGRAM } from './data/program';
 import TodayTab from './components/TodayTab';
 import ProgramTab from './components/ProgramTab';
@@ -8,6 +12,25 @@ import ActiveSession from './components/ActiveSession';
 import CustomBuilder from './components/CustomBuilder';
 
 export default function App() {
+  const [showBanner, setShowBanner] = useState(() => {
+    const saved = load(BANNER_KEY, null);
+    if (!saved || saved.buildTime !== BUILD_TIME) {
+      save(BANNER_KEY, { buildTime: BUILD_TIME, seenCount: 1, dismissed: false });
+      return true;
+    }
+    if (saved.dismissed || saved.seenCount >= 5) return false;
+    save(BANNER_KEY, { ...saved, seenCount: saved.seenCount + 1 });
+    return true;
+  });
+
+  const dismissBanner = () => {
+    setShowBanner(false);
+    const saved = load(BANNER_KEY, { buildTime: BUILD_TIME, seenCount: 1, dismissed: false });
+    save(BANNER_KEY, { ...saved, dismissed: true });
+  };
+
+  const bannerDate = new Date(BUILD_TIME).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
   const [tab, setTab] = useState('today');
   const [program, setProgram] = useState(() => {
     const saved = load('lift_program', null);
@@ -113,6 +136,13 @@ export default function App() {
 
   return (
     <>
+      {showBanner && (
+        <div className="update-banner">
+          <span>App updated — {bannerDate}</span>
+          <button className="update-banner-close" onClick={dismissBanner}>×</button>
+        </div>
+      )}
+
       {showSession && (
         <div style={sessionMinimized ? { display: 'none' } : { flex: 1, minHeight: 0 }}>
           <ActiveSession
@@ -141,30 +171,32 @@ export default function App() {
       )}
 
       {showTabShell && (
-        <div className="app">
-          {tab === 'today' && (
-            <TodayTab
-              program={program}
-              onStart={handleStart}
-              onBuildCustom={handleBuildCustom}
-              minimizedSession={sessionMinimized ? activeSession : null}
-              onResume={handleResume}
-            />
-          )}
-          {tab === 'program'  && <ProgramTab  program={program} setProgram={setProgram} />}
-          {tab === 'progress' && <ProgressTab history={history} prs={prs} onDeleteSession={handleDeleteSession} onDeletePr={handleDeletePr} />}
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <div className="app">
+            {tab === 'today' && (
+              <TodayTab
+                program={program}
+                onStart={handleStart}
+                onBuildCustom={handleBuildCustom}
+                minimizedSession={sessionMinimized ? activeSession : null}
+                onResume={handleResume}
+              />
+            )}
+            {tab === 'program'  && <ProgramTab  program={program} setProgram={setProgram} />}
+            {tab === 'progress' && <ProgressTab history={history} prs={prs} onDeleteSession={handleDeleteSession} onDeletePr={handleDeletePr} />}
 
-          <div className="tab-bar">
-            {tabs.map(t => (
-              <button
-                key={t.id}
-                className={`tab-btn ${tab === t.id ? 'active' : ''}`}
-                onClick={() => setTab(t.id)}
-              >
-                <span className="tab-icon">{t.icon}</span>
-                {t.label}
-              </button>
-            ))}
+            <div className="tab-bar">
+              {tabs.map(t => (
+                <button
+                  key={t.id}
+                  className={`tab-btn ${tab === t.id ? 'active' : ''}`}
+                  onClick={() => setTab(t.id)}
+                >
+                  <span className="tab-icon">{t.icon}</span>
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
