@@ -15,19 +15,16 @@ export default function App() {
   const [showBanner, setShowBanner] = useState(() => {
     const saved = load(BANNER_KEY, null);
     if (!saved || saved.buildTime !== BUILD_TIME) {
-      save(BANNER_KEY, { buildTime: BUILD_TIME, seenCount: 1, dismissed: false });
+      save(BANNER_KEY, { buildTime: BUILD_TIME, seenCount: 1 });
       return true;
     }
-    if (saved.dismissed || saved.seenCount >= 5) return false;
+    if (saved.seenCount >= 5) return false;
     save(BANNER_KEY, { ...saved, seenCount: saved.seenCount + 1 });
     return true;
   });
 
-  const dismissBanner = () => {
-    setShowBanner(false);
-    const saved = load(BANNER_KEY, { buildTime: BUILD_TIME, seenCount: 1, dismissed: false });
-    save(BANNER_KEY, { ...saved, dismissed: true });
-  };
+  // X only dismisses for this session — count is already persisted
+  const dismissBanner = () => setShowBanner(false);
 
   const bannerDate = new Date(BUILD_TIME).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -37,8 +34,11 @@ export default function App() {
     if (!saved || Array.isArray(saved)) return DEFAULT_PROGRAM;
     return saved;
   });
-  const [history, setHistory] = useState(() => load('lift_history', []));
-  const [prs,     setPrs]     = useState(() => load('lift_prs', {}));
+  const [history,   setHistory]   = useState(() => load('lift_history', []));
+  const [prs,       setPrs]       = useState(() => load('lift_prs', {}));
+  const [bodyStats, setBodyStats] = useState(() =>
+    load('lift_body_stats', [{ date: new Date().toISOString().split('T')[0], weight: 162, bodyFat: 13 }])
+  );
 
   // Session state — check for a persisted session at startup
   const [activeSession,    setActiveSession]    = useState(() => load('lift_session_day', null));
@@ -53,9 +53,12 @@ export default function App() {
   const [initSets]    = useState(() => load('lift_session_sets', null));
   const [initElapsed] = useState(() => load('lift_session_elapsed', 0));
 
-  useEffect(() => { save('lift_program', program); }, [program]);
-  useEffect(() => { save('lift_history', history); }, [history]);
-  useEffect(() => { save('lift_prs',     prs);     }, [prs]);
+  useEffect(() => { save('lift_program',    program);   }, [program]);
+  useEffect(() => { save('lift_history',    history);   }, [history]);
+  useEffect(() => { save('lift_prs',        prs);       }, [prs]);
+  useEffect(() => { save('lift_body_stats', bodyStats); }, [bodyStats]);
+
+  const handleAddBodyStat = (entry) => setBodyStats(prev => [...prev, entry]);
 
   // Persist the active session day object whenever it changes
   useEffect(() => {
@@ -183,7 +186,7 @@ export default function App() {
               />
             )}
             {tab === 'program'  && <ProgramTab  program={program} setProgram={setProgram} />}
-            {tab === 'progress' && <ProgressTab history={history} prs={prs} onDeleteSession={handleDeleteSession} onDeletePr={handleDeletePr} />}
+            {tab === 'progress' && <ProgressTab history={history} prs={prs} onDeleteSession={handleDeleteSession} onDeletePr={handleDeletePr} bodyStats={bodyStats} onAddBodyStat={handleAddBodyStat} />}
 
             <div className="tab-bar">
               {tabs.map(t => (

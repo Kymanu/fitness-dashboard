@@ -2,6 +2,23 @@ import { useState, useRef, useEffect } from 'react';
 import { DAYS_OF_WEEK } from '../data/program';
 import { getTodayIdx, typeTag, formatTime, load, save } from '../utils/helpers';
 
+const GOALS = [
+  { name: 'BB Bench Press',    target: 225, unit: 'lbs'  },
+  { name: 'RDL',               target: 225, unit: 'lbs'  },
+  { name: 'Cable Row',         target: 150, unit: 'lbs'  },
+  { name: 'DB Shoulder Press', target: 80,  unit: 'lbs'  },
+  { name: 'Pull Ups',          target: 15,  unit: 'reps' },
+  { name: 'Incline DB Press',  target: 100, unit: 'lbs'  },
+];
+
+const selectOnFocus = (e) => {
+  const el = e.target;
+  requestAnimationFrame(() => el.select());
+};
+
+const fmtStatDate = (dateStr) =>
+  new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
 function SwipeableRow({ onDelete, children }) {
   const [offset, setOffset] = useState(0);
   const [snapping, setSnapping] = useState(false);
@@ -57,17 +74,20 @@ function SwipeableRow({ onDelete, children }) {
   );
 }
 
-export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr }) {
+export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr, bodyStats, onAddBodyStat }) {
   const todayIdx = getTodayIdx();
-  const [apiKey,       setApiKey]      = useState(() => load('lift_ai_key', ''));
-  const [keyDraft,     setKeyDraft]    = useState('');
-  const [loading,      setLoading]     = useState(false);
-  const [feedback,     setFeedback]    = useState('');
-  const [aiError,      setAiError]     = useState('');
-  const [chatMessages, setChatMessages] = useState(() => load('lift_ai_chat', []));
-  const [chatInput,    setChatInput]   = useState('');
-  const [chatLoading,  setChatLoading] = useState(false);
-  const [chatError,    setChatError]   = useState('');
+  const [apiKey,          setApiKey]         = useState(() => load('lift_ai_key', ''));
+  const [keyDraft,        setKeyDraft]        = useState('');
+  const [loading,         setLoading]         = useState(false);
+  const [feedback,        setFeedback]        = useState('');
+  const [aiError,         setAiError]         = useState('');
+  const [chatMessages,    setChatMessages]    = useState(() => load('lift_ai_chat', []));
+  const [chatInput,       setChatInput]       = useState('');
+  const [chatLoading,     setChatLoading]     = useState(false);
+  const [chatError,       setChatError]       = useState('');
+  const [showStatForm,    setShowStatForm]    = useState(false);
+  const [statDraftWeight, setStatDraftWeight] = useState('');
+  const [statDraftBf,     setStatDraftBf]     = useState('');
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -78,10 +98,42 @@ export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr 
     save('lift_ai_chat', chatMessages);
   }, [chatMessages]);
 
-  const clearChat = () => {
-    setChatMessages([]);
+  const clearChat = () => setChatMessages([]);
+
+  // Goals helpers
+  const getGoalCurrent = (goal) => {
+    if (goal.unit === 'reps') {
+      let max = 0;
+      history.forEach(session => {
+        (session.exercises || []).forEach(ex => {
+          if (ex.name === goal.name) {
+            (ex.sets || []).forEach(s => {
+              const r = parseInt(s.reps) || 0;
+              if (r > max) max = r;
+            });
+          }
+        });
+      });
+      return max;
+    }
+    return prs[goal.name] || 0;
   };
 
+  // Body stats helpers
+  const saveBodyStat = () => {
+    const w = parseFloat(statDraftWeight);
+    if (!w) return;
+    const bf = statDraftBf !== '' ? parseFloat(statDraftBf) : null;
+    onAddBodyStat({ date: new Date().toISOString().split('T')[0], weight: w, bodyFat: bf });
+    setStatDraftWeight('');
+    setStatDraftBf('');
+    setShowStatForm(false);
+  };
+
+  const latestStat = bodyStats.length > 0 ? bodyStats[bodyStats.length - 1] : null;
+  const histStats  = bodyStats.length > 1 ? bodyStats.slice(0, -1).reverse().slice(0, 8) : [];
+
+  // AI helpers
   const buildContext = () => {
     const reversed = [...history].reverse().slice(0, 20);
     const typeCounts = {};
@@ -178,6 +230,7 @@ export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr 
 
   return (
     <div className="content">
+      {/* This week */}
       <div className="section-title">This week</div>
       <div className="week-streak">
         {thisWeek.map((d, i) => (
@@ -187,6 +240,7 @@ export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr 
         ))}
       </div>
 
+      {/* PRs */}
       <div className="section-title" style={{ marginTop: 8 }}>PRs</div>
       <div className="card" style={{ margin: '0 16px' }}>
         {Object.keys(prs).length === 0 && (
@@ -204,6 +258,33 @@ export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr 
         ))}
       </div>
 
+      {/* Strength Goals */}
+      <div className="section-title" style={{ marginTop: 8 }}>Strength Goals</div>
+      <div className="card" style={{ margin: '0 16px' }}>
+        {GOALS.map((goal, i) => {
+          const current  = getGoalCurrent(goal);
+          const pct      = current > 0 ? Math.min(100, Math.round((current / goal.target) * 100)) : 0;
+          const achieved = pct >= 100;
+          return (
+            <div key={goal.name} className="goal-row" style={{ borderBottom: i < GOALS.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div className="goal-top">
+                <span className="goal-name">{goal.name}</span>
+                <span className={`goal-vals${achieved ? ' goal-achieved' : ''}`}>
+                  {current > 0 ? `${current} / ${goal.target} ${goal.unit}` : `— / ${goal.target} ${goal.unit}`}
+                </span>
+              </div>
+              <div className="goal-bar-track">
+                <div
+                  className="goal-bar-fill"
+                  style={{ width: `${pct}%`, background: achieved ? 'var(--green)' : 'var(--accent)' }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* History */}
       <div className="section-title" style={{ marginTop: 8 }}>History</div>
       <div className="card" style={{ margin: '0 16px' }}>
         {recent.length === 0 && (
@@ -212,9 +293,9 @@ export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr 
           </div>
         )}
         {recent.map(h => {
-          const d       = new Date(h.date);
-          const date    = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          const dur     = formatTime(h.duration || 0);
+          const d        = new Date(h.date);
+          const date     = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const dur      = formatTime(h.duration || 0);
           const dayLabel = h.dayTag || (h.dayName !== h.type ? h.dayName : null);
 
           return (
@@ -235,6 +316,103 @@ export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr 
         })}
       </div>
 
+      {/* Body Stats */}
+      <div className="section-title" style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 20 }}>
+        <span>Body Stats</span>
+        <button
+          onClick={() => setShowStatForm(v => !v)}
+          style={{ fontSize: 11, fontWeight: 600, color: showStatForm ? 'var(--text-3)' : 'var(--accent)', letterSpacing: 0 }}
+        >
+          {showStatForm ? 'Cancel' : '+ Log'}
+        </button>
+      </div>
+      <div className="card" style={{ margin: '0 16px' }}>
+        {showStatForm && (
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+            <div className="field-row">
+              <div>
+                <div className="field-label">Weight (lbs)</div>
+                <input
+                  className="field-input"
+                  style={{ marginBottom: 0 }}
+                  type="number"
+                  step="0.1"
+                  placeholder="162"
+                  value={statDraftWeight}
+                  onChange={e => setStatDraftWeight(e.target.value)}
+                  onFocus={selectOnFocus}
+                />
+              </div>
+              <div>
+                <div className="field-label">Body fat %</div>
+                <input
+                  className="field-input"
+                  style={{ marginBottom: 0 }}
+                  type="number"
+                  step="0.1"
+                  placeholder="13"
+                  value={statDraftBf}
+                  onChange={e => setStatDraftBf(e.target.value)}
+                  onFocus={selectOnFocus}
+                />
+              </div>
+            </div>
+            <button
+              className="sheet-save"
+              style={{ marginTop: 12, opacity: statDraftWeight.trim() ? 1 : 0.45 }}
+              onClick={saveBodyStat}
+            >
+              Save entry
+            </button>
+          </div>
+        )}
+
+        {latestStat ? (
+          <>
+            <div style={{ padding: '14px 16px', borderBottom: histStats.length > 0 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ display: 'flex', gap: 28, marginBottom: 6 }}>
+                <div>
+                  <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px' }}>
+                    {latestStat.weight}<span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-2)' }}> lbs</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>Weight</div>
+                </div>
+                {latestStat.bodyFat != null && (
+                  <div>
+                    <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px' }}>
+                      {latestStat.bodyFat}<span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-2)' }}>%</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>Body fat</div>
+                  </div>
+                )}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{fmtStatDate(latestStat.date)}</div>
+            </div>
+
+            {histStats.map((s, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '9px 14px',
+                  borderBottom: i < histStats.length - 1 ? '1px solid var(--border)' : 'none',
+                }}
+              >
+                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{fmtStatDate(s.date)}</div>
+                <div style={{ fontSize: 13, fontWeight: 500 }}>
+                  {s.weight} lbs{s.bodyFat != null ? ` · ${s.bodyFat}%` : ''}
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div style={{ padding: '16px', color: 'var(--text-3)', fontSize: 13, textAlign: 'center' }}>
+            Tap + Log to record your stats
+          </div>
+        )}
+      </div>
+
+      {/* AI Trainer */}
       <div className="section-title" style={{ marginTop: 8 }}>AI Trainer</div>
       <div className="card" style={{ margin: '0 16px' }}>
         {!apiKey ? (
