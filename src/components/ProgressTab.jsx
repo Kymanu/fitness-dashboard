@@ -1,14 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
 import { DAYS_OF_WEEK } from '../data/program';
 import { getTodayIdx, typeTag, formatTime, load, save } from '../utils/helpers';
+import { EXERCISE_LIBRARY } from '../data/exercises';
+
+// Reverse map: exercise name → muscle group (first occurrence wins for duplicates)
+const EXERCISE_CATEGORY = {};
+Object.entries(EXERCISE_LIBRARY).forEach(([cat, exs]) => {
+  exs.forEach(ex => { if (!EXERCISE_CATEGORY[ex]) EXERCISE_CATEGORY[ex] = cat; });
+});
+
+const CATEGORY_ORDER = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core'];
 
 const GOALS = [
-  { name: 'BB Bench Press',    target: 225, unit: 'lbs'  },
-  { name: 'RDL',               target: 225, unit: 'lbs'  },
-  { name: 'Cable Row',         target: 150, unit: 'lbs'  },
-  { name: 'DB Shoulder Press', target: 80,  unit: 'lbs'  },
-  { name: 'Pull Ups',          target: 15,  unit: 'reps' },
-  { name: 'Incline DB Press',  target: 100, unit: 'lbs'  },
+  { name: 'BB Bench Press',    target: 225, unit: 'lbs',  category: 'Chest'     },
+  { name: 'Incline DB Press',  target: 100, unit: 'lbs',  category: 'Chest'     },
+  { name: 'RDL',               target: 225, unit: 'lbs',  category: 'Back'      },
+  { name: 'Cable Row',         target: 150, unit: 'lbs',  category: 'Back'      },
+  { name: 'Pull Ups',          target: 15,  unit: 'reps', category: 'Back'      },
+  { name: 'DB Shoulder Press', target: 80,  unit: 'lbs',  category: 'Shoulders' },
 ];
 
 const selectOnFocus = (e) => {
@@ -85,10 +94,36 @@ export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr,
   const [chatInput,       setChatInput]       = useState('');
   const [chatLoading,     setChatLoading]     = useState(false);
   const [chatError,       setChatError]       = useState('');
-  const [showStatForm,    setShowStatForm]    = useState(false);
-  const [statDraftWeight, setStatDraftWeight] = useState('');
-  const [statDraftBf,     setStatDraftBf]     = useState('');
+  const [showStatForm,      setShowStatForm]      = useState(false);
+  const [statDraftWeight,   setStatDraftWeight]   = useState('');
+  const [statDraftBf,       setStatDraftBf]       = useState('');
+  const [collapsedPrCats,   setCollapsedPrCats]   = useState(new Set());
+  const [collapsedGoalCats, setCollapsedGoalCats] = useState(new Set());
   const chatEndRef = useRef(null);
+
+  const togglePrCat   = (cat) => setCollapsedPrCats(prev   => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n; });
+  const toggleGoalCat = (cat) => setCollapsedGoalCats(prev => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n; });
+
+  // Group PRs by muscle category
+  const prGroupMap = {};
+  Object.entries(prs).forEach(([name, weight]) => {
+    const cat = EXERCISE_CATEGORY[name] || 'Other';
+    if (!prGroupMap[cat]) prGroupMap[cat] = [];
+    prGroupMap[cat].push([name, weight]);
+  });
+  const prGroups = [...CATEGORY_ORDER, 'Other']
+    .filter(cat => prGroupMap[cat])
+    .map(cat => ({ cat, entries: prGroupMap[cat] }));
+
+  // Group Goals by muscle category
+  const goalGroupMap = {};
+  GOALS.forEach(g => {
+    if (!goalGroupMap[g.category]) goalGroupMap[g.category] = [];
+    goalGroupMap[g.category].push(g);
+  });
+  const goalGroups = CATEGORY_ORDER
+    .filter(cat => goalGroupMap[cat])
+    .map(cat => ({ cat, goals: goalGroupMap[cat] }));
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -243,42 +278,61 @@ export default function ProgressTab({ history, prs, onDeleteSession, onDeletePr,
       {/* PRs */}
       <div className="section-title" style={{ marginTop: 8 }}>PRs</div>
       <div className="card" style={{ margin: '0 16px' }}>
-        {Object.keys(prs).length === 0 && (
+        {prGroups.length === 0 && (
           <div style={{ padding: '16px', color: 'var(--text-3)', fontSize: 13, textAlign: 'center' }}>
             Complete workouts to track PRs
           </div>
         )}
-        {Object.entries(prs).map(([name, weight]) => (
-          <SwipeableRow key={name} onDelete={() => onDeletePr(name)}>
-            <div className="pr-row">
-              <div className="pr-name">{name}</div>
-              <div className="pr-val">{weight} lbs</div>
+        {prGroups.map(({ cat, entries }, groupIdx) => {
+          const isOpen = !collapsedPrCats.has(cat);
+          return (
+            <div key={cat} style={{ borderTop: groupIdx > 0 ? '1px solid var(--border)' : 'none' }}>
+              <button className="cat-section-header" onClick={() => togglePrCat(cat)}>
+                <span>{cat}</span>
+                <span className="cat-arrow">{isOpen ? '▾' : '▸'}</span>
+              </button>
+              {isOpen && entries.map(([name, weight]) => (
+                <SwipeableRow key={name} onDelete={() => onDeletePr(name)}>
+                  <div className="pr-row">
+                    <div className="pr-name">{name}</div>
+                    <div className="pr-val">{weight} lbs</div>
+                  </div>
+                </SwipeableRow>
+              ))}
             </div>
-          </SwipeableRow>
-        ))}
+          );
+        })}
       </div>
 
       {/* Strength Goals */}
       <div className="section-title" style={{ marginTop: 8 }}>Strength Goals</div>
       <div className="card" style={{ margin: '0 16px' }}>
-        {GOALS.map((goal, i) => {
-          const current  = getGoalCurrent(goal);
-          const pct      = current > 0 ? Math.min(100, Math.round((current / goal.target) * 100)) : 0;
-          const achieved = pct >= 100;
+        {goalGroups.map(({ cat, goals: catGoals }, groupIdx) => {
+          const isOpen = !collapsedGoalCats.has(cat);
           return (
-            <div key={goal.name} className="goal-row" style={{ borderBottom: i < GOALS.length - 1 ? '1px solid var(--border)' : 'none' }}>
-              <div className="goal-top">
-                <span className="goal-name">{goal.name}</span>
-                <span className={`goal-vals${achieved ? ' goal-achieved' : ''}`}>
-                  {current > 0 ? `${current} / ${goal.target} ${goal.unit}` : `— / ${goal.target} ${goal.unit}`}
-                </span>
-              </div>
-              <div className="goal-bar-track">
-                <div
-                  className="goal-bar-fill"
-                  style={{ width: `${pct}%`, background: achieved ? 'var(--green)' : 'var(--accent)' }}
-                />
-              </div>
+            <div key={cat} style={{ borderTop: groupIdx > 0 ? '1px solid var(--border)' : 'none' }}>
+              <button className="cat-section-header" onClick={() => toggleGoalCat(cat)}>
+                <span>{cat}</span>
+                <span className="cat-arrow">{isOpen ? '▾' : '▸'}</span>
+              </button>
+              {isOpen && catGoals.map((goal, i) => {
+                const current  = getGoalCurrent(goal);
+                const pct      = current > 0 ? Math.min(100, Math.round((current / goal.target) * 100)) : 0;
+                const achieved = pct >= 100;
+                return (
+                  <div key={goal.name} className="goal-row" style={{ borderBottom: i < catGoals.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                    <div className="goal-top">
+                      <span className="goal-name">{goal.name}</span>
+                      <span className={`goal-vals${achieved ? ' goal-achieved' : ''}`}>
+                        {current > 0 ? `${current} / ${goal.target} ${goal.unit}` : `— / ${goal.target} ${goal.unit}`}
+                      </span>
+                    </div>
+                    <div className="goal-bar-track">
+                      <div className="goal-bar-fill" style={{ width: `${pct}%`, background: achieved ? 'var(--green)' : 'var(--accent)' }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           );
         })}

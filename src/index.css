@@ -40,7 +40,7 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .tab-icon { font-size: 22px; line-height: 1; }
 
 /* Cards */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .card-padded { padding: 14px 16px; }
 .section-title { font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase; padding: 20px 20px 8px; }
 
@@ -220,6 +220,11 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .chat-input:focus { border-color: var(--accent); outline: none; }
 .chat-send-btn { width: 40px; height: 40px; border-radius: var(--radius); background: var(--accent); color: #fff; font-size: 20px; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .12s; }
 .chat-send-btn:disabled { opacity: .35; cursor: default; }
+
+/* Muscle group category headers (PRs + Goals) */
+.cat-section-header { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 7px 14px; background: var(--surface2); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent; }
+.cat-section-header:active { opacity: .7; }
+.cat-arrow { font-size: 11px; }
 
 /* Strength goals */
 .goal-row { padding: 10px 14px; }
